@@ -1,127 +1,61 @@
 package com.xml.processor.service;
 
-import com.xml.processor.model.Client;
 import com.xml.processor.service.interfaces.ClientService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
-@Service
+@Component
 public class ClientPerformanceMonitor {
+    private static final Logger logger = LoggerFactory.getLogger(ClientPerformanceMonitor.class);
+    private final ClientService clientService;
+    private final Map<Long, Instant> operationStartTimes = new HashMap<>();
+    private final Map<Long, Map<String, Long>> clientMetrics = new HashMap<>();
 
-    @Autowired
-    private ClientService clientService;
-
-    private final Map<Long, ClientMetrics> clientMetrics = new ConcurrentHashMap<>();
-
-    public void recordRequest(Long clientId, long processingTime) {
-        clientMetrics.computeIfAbsent(clientId, k -> new ClientMetrics())
-                .recordRequest(processingTime);
+    public ClientPerformanceMonitor(ClientService clientService) {
+        this.clientService = clientService;
     }
 
-    public void recordError(Long clientId) {
-        clientMetrics.computeIfAbsent(clientId, k -> new ClientMetrics())
-                .recordError();
+    public void startOperation(Long clientId, String operationType) {
+        operationStartTimes.put(clientId, Instant.now());
+        logger.debug("Starting {} operation for client {}", operationType, clientId);
     }
 
-    @Scheduled(fixedRate = 300000) // Every 5 minutes
-    public void generatePerformanceReport() {
-        LocalDateTime now = LocalDateTime.now();
-        for (Map.Entry<Long, ClientMetrics> entry : clientMetrics.entrySet()) {
-            Long clientId = entry.getKey();
-            ClientMetrics metrics = entry.getValue();
-            
-            // Generate report for the last 5 minutes
-            PerformanceReport report = metrics.generateReport(now);
-            
-            // Log or store the report
-            logPerformanceReport(clientId, report);
-            
-            // Reset metrics for the next period
-            metrics.reset();
+    public void endOperation(Long clientId, String operationType) {
+        Instant startTime = operationStartTimes.remove(clientId);
+        if (startTime != null) {
+            Duration duration = Duration.between(startTime, Instant.now());
+            recordMetric(clientId, operationType, duration.toMillis());
+            logger.info("Client {} completed {} operation in {} ms", clientId, operationType, duration.toMillis());
         }
     }
 
-    private void logPerformanceReport(Long clientId, PerformanceReport report) {
-        // TODO: Implement actual logging or storage of performance reports
-        System.out.printf("Performance Report for Client %d:%n", clientId);
-        System.out.printf("Total Requests: %d%n", report.getTotalRequests());
-        System.out.printf("Average Processing Time: %.2f ms%n", report.getAverageProcessingTime());
-        System.out.printf("Error Rate: %.2f%%%n", report.getErrorRate());
-        System.out.printf("Peak Processing Time: %d ms%n", report.getPeakProcessingTime());
-    }
-
-    private static class ClientMetrics {
-        private final AtomicLong totalRequests = new AtomicLong(0);
-        private final AtomicLong totalProcessingTime = new AtomicLong(0);
-        private final AtomicLong totalErrors = new AtomicLong(0);
-        private final AtomicLong peakProcessingTime = new AtomicLong(0);
-
-        public void recordRequest(long processingTime) {
-            totalRequests.incrementAndGet();
-            totalProcessingTime.addAndGet(processingTime);
-            updatePeakProcessingTime(processingTime);
-        }
-
-        public void recordError() {
-            totalErrors.incrementAndGet();
-        }
-
-        private void updatePeakProcessingTime(long processingTime) {
-            long currentPeak;
-            do {
-                currentPeak = peakProcessingTime.get();
-                if (processingTime <= currentPeak) {
-                    break;
-                }
-            } while (!peakProcessingTime.compareAndSet(currentPeak, processingTime));
-        }
-
-        public void reset() {
-            totalRequests.set(0);
-            totalProcessingTime.set(0);
-            totalErrors.set(0);
-            peakProcessingTime.set(0);
-        }
-
-        public PerformanceReport generateReport(LocalDateTime timestamp) {
-            long requests = totalRequests.get();
-            return new PerformanceReport(
-                timestamp,
-                requests,
-                requests > 0 ? (double) totalProcessingTime.get() / requests : 0.0,
-                requests > 0 ? (double) totalErrors.get() / requests * 100 : 0.0,
-                peakProcessingTime.get()
-            );
+    private void recordMetric(Long clientId, String operationType, long durationMs) {
+        clientMetrics.computeIfAbsent(clientId, k -> new HashMap<>())
+                    .merge(operationType, durationMs, (old, current) -> (old + current) / 2);
+        
+        // Log performance metrics
+        Map<String, Long> metrics = clientMetrics.get(clientId);
+        logger.info("Performance metrics for client {}: {}", clientId, metrics);
+        
+        // Check for performance thresholds
+        if (durationMs > 5000) { // 5 seconds threshold
+            logger.warn("Performance warning: Client {} operation {} took {} ms", clientId, operationType, durationMs);
         }
     }
 
-    private static class PerformanceReport {
-        private final LocalDateTime timestamp;
-        private final long totalRequests;
-        private final double averageProcessingTime;
-        private final double errorRate;
-        private final long peakProcessingTime;
+    public Map<String, Long> getClientMetrics(Long clientId) {
+        return clientMetrics.getOrDefault(clientId, new HashMap<>());
+    }
 
-        public PerformanceReport(LocalDateTime timestamp, long totalRequests, 
-                               double averageProcessingTime, double errorRate, 
-                               long peakProcessingTime) {
-            this.timestamp = timestamp;
-            this.totalRequests = totalRequests;
-            this.averageProcessingTime = averageProcessingTime;
-            this.errorRate = errorRate;
-            this.peakProcessingTime = peakProcessingTime;
-        }
-
-        public LocalDateTime getTimestamp() { return timestamp; }
-        public long getTotalRequests() { return totalRequests; }
-        public double getAverageProcessingTime() { return averageProcessingTime; }
-        public double getErrorRate() { return errorRate; }
-        public long getPeakProcessingTime() { return peakProcessingTime; }
+    public void clearMetrics(Long clientId) {
+        clientMetrics.remove(clientId);
+        operationStartTimes.remove(clientId);
+        logger.debug("Cleared performance metrics for client {}", clientId);
     }
 } 

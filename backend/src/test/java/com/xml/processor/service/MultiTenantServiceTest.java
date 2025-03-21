@@ -10,6 +10,7 @@ import com.xml.processor.repository.AsnHeaderRepository;
 import com.xml.processor.repository.AsnLineRepository;
 import com.xml.processor.repository.ProcessedFileRepository;
 import com.xml.processor.repository.MappingRuleRepository;
+import com.xml.processor.service.interfaces.ClientService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,9 +27,6 @@ public class MultiTenantServiceTest {
 
     @Autowired
     private ClientService clientService;
-
-    @Autowired
-    private ClientRepository clientRepository;
 
     @Autowired
     private AsnHeaderRepository asnHeaderRepository;
@@ -52,13 +50,13 @@ public class MultiTenantServiceTest {
         client1.setName("TEST_CLIENT_1");
         client1.setDescription("Test Client 1");
         client1.setStatus(Client.ClientStatus.ACTIVE);
-        client1 = clientService.createClient(client1);
+        client1 = clientService.saveClient(client1);
 
         client2 = new Client();
         client2.setName("TEST_CLIENT_2");
         client2.setDescription("Test Client 2");
         client2.setStatus(Client.ClientStatus.ACTIVE);
-        client2 = clientService.createClient(client2);
+        client2 = clientService.saveClient(client2);
     }
 
     @Test
@@ -76,8 +74,8 @@ public class MultiTenantServiceTest {
         asnHeaderRepository.save(header2);
 
         // Verify data isolation
-        List<AsnHeader> client1Headers = asnHeaderRepository.findByClientId(client1.getId());
-        List<AsnHeader> client2Headers = asnHeaderRepository.findByClientId(client2.getId());
+        List<AsnHeader> client1Headers = asnHeaderRepository.findByClient_Id(client1.getId());
+        List<AsnHeader> client2Headers = asnHeaderRepository.findByClient_Id(client2.getId());
 
         assertEquals(1, client1Headers.size());
         assertEquals(1, client2Headers.size());
@@ -94,7 +92,7 @@ public class MultiTenantServiceTest {
         processedFileRepository.save(file1);
 
         // Attempt to access client1's data through client2's context
-        List<ProcessedFile> client2Files = processedFileRepository.findByClientId(client2.getId());
+        List<ProcessedFile> client2Files = processedFileRepository.findByClient_Id(client2.getId());
         assertTrue(client2Files.isEmpty());
     }
 
@@ -110,7 +108,7 @@ public class MultiTenantServiceTest {
         clientService.deleteClient(client1.getId());
 
         // Verify data is deleted
-        List<MappingRule> client1Rules = mappingRuleRepository.findByClientId(client1.getId());
+        List<MappingRule> client1Rules = mappingRuleRepository.findByClient_Id(client1.getId());
         assertTrue(client1Rules.isEmpty());
     }
 
@@ -124,10 +122,10 @@ public class MultiTenantServiceTest {
 
         // Suspend client1
         client1.setStatus(Client.ClientStatus.SUSPENDED);
-        clientService.updateClient(client1.getId(), client1);
+        client1 = clientService.saveClient(client1);
 
         // Verify data is still accessible but client is suspended
-        List<AsnLine> client1Lines = asnLineRepository.findByClientId(client1.getId());
+        List<AsnLine> client1Lines = asnLineRepository.findByClient_Id(client1.getId());
         assertEquals(1, client1Lines.size());
         assertEquals(Client.ClientStatus.SUSPENDED, client1.getStatus());
     }

@@ -17,7 +17,32 @@ public class ClientController {
 
     @PostMapping
     public ResponseEntity<Client> createClient(@RequestBody Client client) {
-        return ResponseEntity.ok(clientService.createClient(client));
+        return ResponseEntity.ok(clientService.saveClient(client));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Client> getClient(@PathVariable Long id) {
+        return clientService.getClientById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Client> updateClient(@PathVariable Long id, @RequestBody Client client) {
+        if (!clientService.getClientById(id).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        client.setId(id);
+        return ResponseEntity.ok(clientService.saveClient(client));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteClient(@PathVariable Long id) {
+        if (!clientService.getClientById(id).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        clientService.deleteClient(id);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping
@@ -25,28 +50,12 @@ public class ClientController {
         return ResponseEntity.ok(clientService.getAllClients());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Client> getClientById(@PathVariable Long id) {
-        return clientService.getClientById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
     @GetMapping("/name/{name}")
     public ResponseEntity<Client> getClientByName(@PathVariable String name) {
-        return clientService.getClientByName(name)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Client> updateClient(@PathVariable Long id, @RequestBody Client clientDetails) {
-        return ResponseEntity.ok(clientService.updateClient(id, clientDetails));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteClient(@PathVariable Long id) {
-        clientService.deleteClient(id);
-        return ResponseEntity.ok().build();
+        try {
+            return ResponseEntity.ok(clientService.getClientByName(name));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 } 

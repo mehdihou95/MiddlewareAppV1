@@ -26,18 +26,27 @@ public class ClientContextFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         
-        String clientId = request.getHeader(CLIENT_ID_HEADER);
+        String clientIdHeader = request.getHeader(CLIENT_ID_HEADER);
         String clientName = request.getHeader(CLIENT_NAME_HEADER);
 
-        if (clientId != null && !clientId.isEmpty()) {
-            Optional<Client> client = clientService.getClientById(Long.parseLong(clientId));
-            if (client.isPresent()) {
-                ClientContextHolder.setClient(client.get());
+        if (clientIdHeader != null && !clientIdHeader.isEmpty()) {
+            try {
+                Long clientId = Long.parseLong(clientIdHeader);
+                Optional<Client> clientOpt = clientService.getClientById(clientId);
+                if (clientOpt.isPresent()) {
+                    ClientContextHolder.setClient(clientOpt.get());
+                } else {
+                    throw new RuntimeException("Client not found with ID: " + clientId);
+                }
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Invalid client ID format: " + clientIdHeader);
             }
         } else if (clientName != null && !clientName.isEmpty()) {
-            Optional<Client> client = clientService.getClientByName(clientName);
-            if (client.isPresent()) {
-                ClientContextHolder.setClient(client.get());
+            try {
+                Client client = clientService.getClientByName(clientName);
+                ClientContextHolder.setClient(client);
+            } catch (RuntimeException e) {
+                throw new RuntimeException("Client not found with name: " + clientName);
             }
         }
 

@@ -1,12 +1,14 @@
 package com.xml.processor.converter;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,21 +26,20 @@ public class JsonAttributeConverter implements AttributeConverter<Map<String, Ob
         try {
             return objectMapper.writeValueAsString(attribute);
         } catch (JsonProcessingException e) {
-            logger.error("Error converting Map to JSON string", e);
-            throw new RuntimeException("Error converting Map to JSON string", e);
+            logger.error("Error converting map to JSON string", e);
+            return null;
         }
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Map<String, Object> convertToEntityAttribute(String dbData) {
+        if (dbData == null || dbData.isEmpty()) {
+            return new HashMap<>();
+        }
         try {
-            if (dbData == null || dbData.isEmpty()) {
-                return new HashMap<>();
-            }
-            return objectMapper.readValue(dbData, Map.class);
-        } catch (Exception e) {
-            logger.error("Error converting JSON to Map: {}", e.getMessage(), e);
+            return objectMapper.readValue(dbData, new TypeReference<Map<String, Object>>() {});
+        } catch (IOException e) {
+            logger.error("Error converting JSON string to map", e);
             return new HashMap<>();
         }
     }

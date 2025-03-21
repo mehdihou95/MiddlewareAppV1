@@ -3,6 +3,7 @@ package com.xml.processor.service;
 import com.xml.processor.model.Client;
 import com.xml.processor.repository.ClientRepository;
 import com.xml.processor.service.interfaces.ClientService;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,10 +16,10 @@ public class ClientServiceImpl implements ClientService {
     
     @Autowired
     private ClientRepository clientRepository;
-
+    
     @Override
     @Transactional
-    public Client createClient(Client client) {
+    public Client saveClient(Client client) {
         if (clientRepository.existsByName(client.getName())) {
             throw new IllegalArgumentException("Client with name " + client.getName() + " already exists");
         }
@@ -39,26 +40,9 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Client> getClientByName(String name) {
-        return clientRepository.findByName(name);
-    }
-
-    @Override
-    @Transactional
-    public Client updateClient(Long id, Client clientDetails) {
-        Client client = clientRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Client not found with id: " + id));
-        
-        if (!client.getName().equals(clientDetails.getName()) && 
-            clientRepository.existsByNameAndIdNot(clientDetails.getName(), id)) {
-            throw new IllegalArgumentException("Client with name " + clientDetails.getName() + " already exists");
-        }
-        
-        client.setName(clientDetails.getName());
-        client.setDescription(clientDetails.getDescription());
-        client.setStatus(clientDetails.getStatus());
-        
-        return clientRepository.save(client);
+    public Client getClientByName(String name) {
+        return clientRepository.findByName(name)
+            .orElseThrow(() -> new EntityNotFoundException("Client not found with name: " + name));
     }
 
     @Override
@@ -71,13 +55,33 @@ public class ClientServiceImpl implements ClientService {
     }
     
     @Override
+    public boolean existsByName(String name) {
+        return clientRepository.existsByName(name);
+    }
+
+    // Non-interface methods without @Override
+    @Transactional
+    public Client updateClient(Long id, Client clientDetails) {
+        Client client = clientRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Client not found with id: " + id));
+        
+        if (!client.getName().equals(clientDetails.getName()) && 
+            clientRepository.existsByNameAndIdNot(clientDetails.getName(), id)) {
+            throw new IllegalArgumentException("Client with name " + clientDetails.getName() + " already exists");
+        }
+        
+        client.setName(clientDetails.getName());
+        client.setDescription(clientDetails.getDescription());
+        client.setStatus(clientDetails.getStatus());
+        
+        return clientRepository.save(client);
+    }
+    
     public boolean existsById(Long id) {
         return clientRepository.existsById(id);
     }
     
-    @Override
     public Optional<Client> findByClientCode(String clientCode) {
-        // Assuming the code field in Client is meant for clientCode
         return clientRepository.findByCode(clientCode);
     }
 } 

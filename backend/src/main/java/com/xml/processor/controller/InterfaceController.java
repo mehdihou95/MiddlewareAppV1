@@ -34,30 +34,36 @@ public class InterfaceController {
     
     @GetMapping
     public ResponseEntity<List<Interface>> getAllInterfaces() {
-        Long clientId = ClientContextHolder.getClientId();
-        return ResponseEntity.ok(interfaceService.getClientInterfaces(clientId));
+        logger.debug("Fetching all interfaces");
+        List<Interface> interfaces = interfaceService.getAllInterfaces();
+        return ResponseEntity.ok(interfaces);
     }
     
     @GetMapping("/{id}")
-    public ResponseEntity<Interface> getInterfaceById(@PathVariable Long id) {
-        return ResponseEntity.ok(interfaceService.getInterfaceById(id)
-            .orElseThrow(() -> new RuntimeException("Interface not found")));
+    public ResponseEntity<Interface> getInterface(@PathVariable Long id) {
+        logger.debug("Fetching interface with id: {}", id);
+        return interfaceService.getInterfaceById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
     
     @PostMapping
-    public ResponseEntity<Interface> createInterface(@Valid @RequestBody Interface interfaceEntity) {
-        return ResponseEntity.ok(interfaceService.createInterface(interfaceEntity));
+    public ResponseEntity<Interface> createInterface(@RequestBody Interface interfaceEntity) {
+        logger.info("Creating new interface: {}", interfaceEntity.getName());
+        Interface created = interfaceService.createInterface(interfaceEntity);
+        return ResponseEntity.ok(created);
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<Interface> updateInterface(
-            @PathVariable Long id,
-            @Valid @RequestBody Interface interfaceEntity) {
-        return ResponseEntity.ok(interfaceService.updateInterface(id, interfaceEntity));
+    public ResponseEntity<Interface> updateInterface(@PathVariable Long id, @RequestBody Interface interfaceEntity) {
+        logger.info("Updating interface with id: {}", id);
+        Interface updated = interfaceService.updateInterface(id, interfaceEntity);
+        return ResponseEntity.ok(updated);
     }
     
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteInterface(@PathVariable Long id) {
+        logger.info("Deleting interface with id: {}", id);
         interfaceService.deleteInterface(id);
         return ResponseEntity.ok().build();
     }
@@ -86,7 +92,7 @@ public class InterfaceController {
     @PostMapping("/{id}/validate")
     public ResponseEntity<Map<String, Object>> validateInterface(@PathVariable Long id) {
         Interface interfaceEntity = interfaceService.getInterfaceById(id)
-            .orElseThrow(() -> new RuntimeException("Interface not found"));
+                .orElseThrow(() -> new RuntimeException("Interface not found"));
             
         Map<String, Object> validationResult = new HashMap<>();
         validationResult.put("valid", true);

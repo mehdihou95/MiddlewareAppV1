@@ -32,4 +32,17 @@ public interface MappingRuleRepository extends BaseRepository<MappingRule> {
     
     @Query("DELETE FROM MappingRule m WHERE m.client.id = ?1")
     void deleteByClient_Id(Long clientId);
+
+    /**
+     * Find all mapping rules for a specific client
+     *
+     * @param clientId The ID of the client
+     * @return List of mapping rules belonging to the client
+     */
+    List<MappingRule> findByClient_Id(Long clientId);
+
+    /**
+     * Find mapping rules by client ID and interface ID
+     */
+    List<MappingRule> findByClient_IdAndInterfaceEntity_Id(Long clientId, Long interfaceId);
 } 

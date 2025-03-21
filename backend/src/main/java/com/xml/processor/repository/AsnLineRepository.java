@@ -5,10 +5,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface AsnLineRepository extends BaseRepository<AsnLine> {
+    
+    /**
+     * Find all ASN lines for a specific client
+     *
+     * @param clientId The ID of the client
+     * @return List of ASN lines belonging to the client
+     */
+    List<AsnLine> findByClient_Id(Long clientId);
     
     @Query("SELECT l FROM AsnLine l WHERE l.client.id = ?1 AND l.header.id = ?2")
     List<AsnLine> findByClient_IdAndHeaderId(Long clientId, Long headerId);

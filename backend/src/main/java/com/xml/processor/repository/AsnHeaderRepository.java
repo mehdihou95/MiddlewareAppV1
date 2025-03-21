@@ -21,4 +21,17 @@ public interface AsnHeaderRepository extends BaseRepository<AsnHeader> {
     
     @Query("SELECT h FROM AsnHeader h WHERE h.client.id = ?1 ORDER BY h.createdAt DESC")
     List<AsnHeader> findLatestHeaders(Long clientId);
+
+    /**
+     * Find all ASN headers for a specific client
+     *
+     * @param clientId The ID of the client
+     * @return List of ASN headers belonging to the client
+     */
+    List<AsnHeader> findByClient_Id(Long clientId);
+
+    /**
+     * Find ASN headers by client ID and document date
+     */
+    List<AsnHeader> findByClient_IdAndDocumentDate(Long clientId, String documentDate);
 } 
