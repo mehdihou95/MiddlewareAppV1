@@ -1,98 +1,155 @@
-# XML Processing Application
+# XML Middleware Application
 
-This application is a full-stack solution for processing XML files using Spring Boot, Apache Camel, and React. It provides XML validation, transformation, and storage capabilities with a modern web interface.
+This application is a multi-tenant middleware solution for processing XML files using Spring Boot and React. It provides XML validation, transformation, and storage capabilities with a modern web interface and client-specific configurations.
 
 ## Features
 
-- XML file processing with XSD validation
-- Dynamic mapping configuration
-- Role-based access control
-- Real-time processing status
-- Modern React-based UI
-- H2 database for data storage
+- Multi-tenant XML file processing with XSD validation
+- Client-specific mapping rules and configurations
+- Role-based access control with multi-tenant security
+- Real-time processing status and monitoring
+- Modern React-based UI with Material-UI components
+- H2 database for development, PostgreSQL for production
+- Flyway database migrations
+- JWT-based authentication
+- Client performance monitoring
+- Comprehensive error handling and logging
 
 ## Prerequisites
 
 - Java 17 or higher
-- Node.js 14 or higher
+- Node.js 16 or higher
 - Maven 3.6 or higher
+- Git
 
 ## Project Structure
 
 ```
 .
-├── src/                    # Backend source files
-│   ├── main/
-│   │   ├── java/          # Java source code
-│   │   └── resources/     # Configuration files
-│   └── test/              # Test files
-├── frontend/              # React frontend
-├── inbox/                 # Directory for incoming XML files
-├── processed/            # Directory for processed files
-└── error/               # Directory for failed files
+├── backend/                # Spring Boot backend
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/     # Java source code
+│   │   │   └── resources/ # Configuration and migrations
+│   │   └── test/         # Test files
+│   └── pom.xml           # Maven configuration
+├── frontend/             # React TypeScript frontend
+│   ├── src/
+│   │   ├── components/  # React components
+│   │   ├── pages/      # Page components
+│   │   └── context/    # React context providers
+│   └── package.json    # npm configuration
+├── Input/              # Sample XML input files
+└── docs/              # Documentation files
 ```
 
 ## Setup
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd xml-processor
+git clone https://github.com/mehdihou95/MiddlewareAppV1.git
+cd MiddlewareAppV1
 ```
 
-2. Build the backend:
+2. Build and run the backend:
 ```bash
+cd backend
 mvn clean install
-```
-
-3. Set up the frontend:
-```bash
-cd frontend
-npm install
-```
-
-## Running the Application
-
-1. Start the Spring Boot backend:
-```bash
 mvn spring-boot:run
 ```
 
-2. Start the React frontend development server:
+3. Set up and run the frontend:
 ```bash
 cd frontend
+npm install
 npm start
 ```
 
-3. Access the application:
+## Accessing the Application
+
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8080
 - H2 Console: http://localhost:8080/h2-console
+  - JDBC URL: jdbc:h2:mem:testdb
+  - Username: sa
+  - Password: password
 
 ## Default Users
 
-The application comes with two default users:
+The application comes with predefined users:
 - Admin: username: `admin`, password: `admin123`
-- User: username: `user`, password: `user123`
+  - Full system access
+  - Client management
+  - Interface configuration
+- Client User: username: `user`, password: `user123`
+  - Client-specific access
+  - File processing
+  - Mapping rule management
 
-## API Endpoints
+## Core API Endpoints
 
-- `POST /api/mappings` - Create mapping rules
-- `GET /api/mappings` - List all mappings
-- `POST /api/schemas` - Upload XSD schema
-- `GET /api/process-status` - Get file processing stats
+### Authentication
+- `POST /api/auth/login` - User authentication
+- `GET /api/auth/user` - Get current user
 
-## Directory Setup
+### Client Management
+- `GET /api/clients` - List clients
+- `POST /api/clients` - Create client
+- `GET /api/clients/{id}` - Get client details
 
-Create the following directories in the project root:
-```bash
-mkdir inbox processed error
+### Interface Management
+- `GET /api/interfaces` - List interfaces
+- `POST /api/interfaces` - Create interface
+- `GET /api/interfaces/{id}` - Get interface details
+
+### Mapping Rules
+- `GET /api/mapping-rules` - List mapping rules
+- `POST /api/mapping-rules` - Create mapping rule
+- `GET /api/mapping-rules/{id}` - Get rule details
+
+### File Processing
+- `POST /api/files/upload` - Upload XML file
+- `GET /api/files/process/{id}` - Process file
+- `GET /api/files/status/{id}` - Check processing status
+
+## Configuration
+
+### Backend Configuration
+File: `backend/src/main/resources/application.properties`
+```properties
+# Database Configuration
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.username=sa
+spring.datasource.password=password
+
+# JPA Configuration
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=true
+
+# Server Configuration
+server.port=8080
+
+# JWT Configuration
+jwt.secret=your-secret-key
+jwt.expiration=86400000
 ```
+
+### Frontend Configuration
+File: `frontend/.env`
+```properties
+REACT_APP_API_URL=http://localhost:8080/api
+```
+
+## Documentation
+
+- [Functional Specification](FUNCTIONAL_SPECIFICATION.md)
+- [Technical Specification](TECHNICAL_SPECIFICATION.md)
 
 ## Testing
 
 1. Run backend tests:
 ```bash
+cd backend
 mvn test
 ```
 
@@ -102,24 +159,13 @@ cd frontend
 npm test
 ```
 
-## Configuration
-
-The application can be configured through `src/main/resources/application.properties`:
-
-```properties
-camel.file.inbox=./inbox
-h2.datasource.url=jdbc:h2:file:./data/middleware
-h2.datasource.username=sa
-h2.datasource.password=
-```
-
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## License
 
