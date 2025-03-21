@@ -1,124 +1,129 @@
-# XML Processor Middleware Application - Functional Specification
+# XML Middleware Application - Functional Specification
 
 ## 1. Overview
-The XML Processor Middleware Application is a web-based system designed to process and store XML documents containing Advanced Shipping Notice (ASN) data. The application provides a user-friendly interface for uploading XML files, validates them against predefined schemas, and stores the processed data in a relational database.
+The XML Middleware Application is a multi-tenant system designed to process and transform XML documents according to client-specific rules. It provides a secure, scalable platform for handling XML data transformation with support for multiple clients and interfaces.
 
-## 2. User Interface Requirements
+## 2. User Roles and Access Control
+### 2.1 Admin Users
+- Full system access
+- Client management capabilities
+- Interface configuration
+- Mapping rule management
+- User management
 
-### 2.1 Frontend Interface
-- Modern, responsive web interface built with React
-- Navigation bar with Upload, History, Transform, and UX sections
-- File upload component for XML documents
-- Status display for upload and processing operations
-- Error messaging system for invalid uploads or processing issues
-- Data visualization of processed ASN records
+### 2.2 Client Users
+- Access to client-specific data only
+- XML file upload and processing
+- View processing history
+- Manage client-specific mapping rules
 
-### 2.2 History View
-- Table display of all processed files
-- File name, processing date, and status information
-- Status indicators (Success, Error, Warning)
-- Number of records processed per file
-- Error messages for failed processing attempts
-- Auto-refresh capability (every 30 seconds)
+## 3. Core Features
 
-### 2.3 Transform Page
-- Split-panel interface showing XML elements and database fields
-- Dynamic XSD structure loading and refresh capability
-- Mapping creation between XML elements and database fields
-- Configuration saving functionality
-- Visual feedback for mapping operations
-- Real-time validation of mapping rules
+### 3.1 User Authentication and Authorization
+- Secure login system
+- Role-based access control
+- Multi-tenant data isolation
+- Session management
 
-## 3. Functional Requirements
+### 3.2 Client Management
+- Create and manage client profiles
+- Configure client-specific settings
+- Monitor client performance
+- Manage client access and permissions
 
-### 3.1 XML File Processing
-- Support for various XML file formats
-- Validation against XSD schemas
-- Handling of different date formats
-- Processing of both header and line item data
-- Support for different XML structures and naming conventions
-- Prevention of duplicate entries
+### 3.3 XML Processing
+- Upload XML files
+- Validate against XSD schemas
+- Transform according to mapping rules
+- Process multiple file formats
+- Real-time processing status
 
-### 3.2 Data Management
-- Storage of ASN header information
-- Storage of ASN line items
-- Prevention of duplicate entries
-- Data validation and error handling
-- Support for various field types (dates, numbers, text)
-- Transaction management
+### 3.4 Mapping Rules
+- Create and edit mapping rules
+- Rule validation
+- Version control for rules
+- Rule testing capabilities
+- Support for complex transformations
 
-### 3.3 Mapping Configuration
-- Dynamic XSD structure loading
-- Real-time XSD refresh capability
-- XML to database field mapping
-- Mapping rule management (create, delete)
-- Configuration persistence
-- Validation of mapping rules
+### 3.5 Interface Management
+- Configure input/output interfaces
+- Define interface schemas
+- Manage interface versions
+- Monitor interface performance
 
-## 4. Business Rules
+## 4. User Interface Requirements
 
-### 4.1 Data Validation Rules
-- XML files must conform to specified XSD schemas
-- Required fields must be present and valid
-- Dates must be in acceptable formats
-- Line items must be associated with valid headers
-- Mapping rules must be valid and complete
+### 4.1 Dashboard
+- Processing statistics
+- Recent activity
+- Error reports
+- Performance metrics
 
-### 4.2 Processing Rules
-- Duplicate ASN entries should be prevented
-- All line items must be associated with a header
-- Data type conversions must maintain accuracy
-- Error handling must be comprehensive
-- Mapping rules must be applied consistently
+### 4.2 File Upload Interface
+- Drag-and-drop functionality
+- Multi-file upload
+- Progress indicators
+- Validation feedback
 
-## 5. Error Handling
+### 4.3 Rule Management Interface
+- Rule editor
+- Rule testing tools
+- Version history
+- Documentation tools
 
-### 5.1 User Feedback
-- Clear error messages for invalid file uploads
-- Processing status updates
-- Validation failure notifications
-- Database operation status feedback
-- Mapping configuration error notifications
+### 4.4 Reporting Interface
+- Processing history
+- Error logs
+- Performance reports
+- Audit trails
 
-### 5.2 System Errors
-- XML parsing errors
-- Schema validation failures
-- Database operation failures
-- Network connectivity issues
-- Mapping rule validation errors
+## 5. Business Rules
 
-## 6. Performance Requirements
-- File upload size limits: up to 10MB
-- Processing time: < 30 seconds per file
-- Concurrent user support: up to 50 users
-- Response time: < 2 seconds for UI operations
-- History view refresh: every 30 seconds
+### 5.1 Data Processing
+- All XML files must be validated against schemas
+- Processing must follow client-specific rules
+- Failed validations must be logged
+- Processed files must be archived
 
-## 7. Security Requirements
-- Secure file upload handling
-- Input validation and sanitization
-- Protection against XML external entity (XXE) attacks
-- Database security measures
-- User authentication and authorization
+### 5.2 Security
+- Data isolation between clients
+- Encrypted data transmission
+- Audit logging of all actions
+- Regular security assessments
 
-## 8. Compliance Requirements
-- Data format compliance with industry standards
-- Proper error logging and tracking
-- Audit trail for data modifications
+### 5.3 Performance
+- Process files within 30 seconds
+- Support concurrent processing
+- Handle files up to 100MB
+- Maintain 99.9% uptime
+
+## 6. Compliance Requirements
+- GDPR compliance for EU data
 - Data retention policies
-- Mapping configuration versioning
+- Audit trail maintenance
+- Security standards compliance
 
-## 9. Integration Points
-- Frontend to Backend API communication
-- Database connectivity
-- File system interactions
-- XSD schema management
-- Mapping configuration management
+## 7. Error Handling
+- Clear error messages
+- Retry mechanisms
+- Error notification system
+- Error recovery procedures
 
-## 10. Success Criteria
-- Successful processing of various XML formats
-- Accurate data storage and retrieval
-- Proper handling of edge cases
-- User-friendly interface and operation
-- Reliable error handling and reporting
-- Effective mapping configuration management 
+## 8. Reporting Requirements
+- Processing statistics
+- Error reports
+- Performance metrics
+- Usage analytics
+- Audit logs
+
+## 9. Integration Requirements
+- REST API support
+- Batch processing capabilities
+- External system notifications
+- Database integration
+
+## 10. Service Level Agreements
+- 99.9% system availability
+- Maximum 30-second processing time
+- 24/7 system monitoring
+- Regular backup procedures 
