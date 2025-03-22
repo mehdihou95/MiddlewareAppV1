@@ -10,51 +10,70 @@ import FileUpload from './components/FileUpload';
 import ProcessedFiles from './components/ProcessedFiles';
 import PrivateRoute from './components/PrivateRoute';
 import TransformPage from './pages/TransformPage';
+import ClientManagementPage from './pages/ClientManagementPage';
+import InterfaceManagementPage from './pages/InterfaceManagementPage';
 import { AuthProvider } from './context/AuthContext';
+import { ClientInterfaceProvider } from './context/ClientInterfaceContext';
 
-const App = () => {
+const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <Router>
-          <Navigation />
-          <Container sx={{ mt: 4 }}>
-            <Routes>
-              <Route 
-                path="/login" 
-                element={
-                  <Login />
-                } 
-              />
-              <Route
-                path="/"
-                element={
-                  <PrivateRoute>
-                    <FileUpload />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/history"
-                element={
-                  <PrivateRoute>
-                    <ProcessedFiles />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/transform"
-                element={
-                  <PrivateRoute>
-                    <TransformPage />
-                  </PrivateRoute>
-                }
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Container>
-        </Router>
+        <ClientInterfaceProvider>
+          <Router>
+            <Navigation />
+            <Container sx={{ mt: 4 }}>
+              <Routes>
+                <Route 
+                  path="/login" 
+                  element={<Login />} 
+                />
+                <Route
+                  path="/"
+                  element={
+                    <PrivateRoute>
+                      <FileUpload />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/history"
+                  element={
+                    <PrivateRoute>
+                      <ProcessedFiles />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/transform"
+                  element={
+                    <PrivateRoute>
+                      <TransformPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/clients"
+                  element={
+                    <PrivateRoute>
+                      <ClientManagementPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/interfaces"
+                  element={
+                    <PrivateRoute>
+                      <InterfaceManagementPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Container>
+          </Router>
+        </ClientInterfaceProvider>
       </AuthProvider>
     </ThemeProvider>
   );

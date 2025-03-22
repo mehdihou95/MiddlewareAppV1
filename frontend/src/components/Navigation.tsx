@@ -1,6 +1,6 @@
-import React from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Box, Divider, IconButton, Menu, MenuItem } from '@mui/material';
+import React, { useState } from 'react';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Button, Box, Divider, IconButton, Menu, MenuItem, Chip } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -12,11 +12,28 @@ import TransformIcon from '@mui/icons-material/Transform';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import { useAuth } from '../context/AuthContext';
 import HistoryIcon from '@mui/icons-material/History';
+import BusinessIcon from '@mui/icons-material/Business';
+import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { useClientInterface } from '../context/ClientInterfaceContext';
 
 const Navigation = () => {
+  const location = useLocation();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { 
+    clients, 
+    interfaces, 
+    selectedClient, 
+    selectedInterface,
+    setSelectedClient,
+    setSelectedInterface
+  } = useClientInterface();
+  
+  const [clientMenuAnchor, setClientMenuAnchor] = useState<null | HTMLElement>(null);
+  const [interfaceMenuAnchor, setInterfaceMenuAnchor] = useState<null | HTMLElement>(null);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -26,9 +43,48 @@ const Navigation = () => {
     setAnchorEl(null);
   };
 
+  const handleClientMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setClientMenuAnchor(event.currentTarget);
+  };
+
+  const handleClientMenuClose = () => {
+    setClientMenuAnchor(null);
+  };
+
+  const handleInterfaceMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setInterfaceMenuAnchor(event.currentTarget);
+  };
+
+  const handleInterfaceMenuClose = () => {
+    setInterfaceMenuAnchor(null);
+  };
+
+  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setUserMenuAnchor(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setUserMenuAnchor(null);
+  };
+
+  const handleClientSelect = (client: any) => {
+    setSelectedClient(client);
+    handleClientMenuClose();
+  };
+
+  const handleInterfaceSelect = (interfaceObj: any) => {
+    setSelectedInterface(interfaceObj);
+    handleInterfaceMenuClose();
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+    handleUserMenuClose();
+  };
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
   };
 
   if (!user?.authenticated) {
@@ -111,33 +167,148 @@ const Navigation = () => {
 
           <Divider orientation="vertical" flexItem sx={{ bgcolor: 'white' }} />
 
-          <IconButton
-            size="large"
-            aria-label="account of current user"
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
-            onClick={handleMenu}
-            color="inherit"
-          >
-            <AccountCircle />
-          </IconButton>
-          <Menu
-            id="menu-appbar"
-            anchorEl={anchorEl}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            keepMounted
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            open={Boolean(anchorEl)}
-            onClose={handleClose}
-          >
-            <MenuItem onClick={handleLogout}>Logout</MenuItem>
-          </Menu>
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+            <Button
+              color="inherit"
+              component={RouterLink}
+              to="/clients"
+              sx={{ 
+                mx: 1,
+                fontWeight: isActive('/clients') ? 'bold' : 'normal',
+                borderBottom: isActive('/clients') ? '2px solid white' : 'none'
+              }}
+            >
+              Clients
+            </Button>
+            <Button
+              color="inherit"
+              component={RouterLink}
+              to="/interfaces"
+              sx={{ 
+                mx: 1,
+                fontWeight: isActive('/interfaces') ? 'bold' : 'normal',
+                borderBottom: isActive('/interfaces') ? '2px solid white' : 'none'
+              }}
+            >
+              Interfaces
+            </Button>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+            <Chip
+              icon={<BusinessIcon />}
+              label={selectedClient ? selectedClient.name : "Select Client"}
+              onClick={handleClientMenuOpen}
+              color={selectedClient ? "primary" : "default"}
+              variant="outlined"
+              sx={{ mr: 1, bgcolor: 'rgba(255,255,255,0.1)' }}
+              deleteIcon={<KeyboardArrowDownIcon />}
+              onDelete={handleClientMenuOpen}
+            />
+            
+            <Menu
+              anchorEl={clientMenuAnchor}
+              open={Boolean(clientMenuAnchor)}
+              onClose={handleClientMenuClose}
+            >
+              {clients.length === 0 ? (
+                <MenuItem disabled>
+                  No clients available
+                </MenuItem>
+              ) : (
+                clients.map(client => (
+                  <MenuItem 
+                    key={client.id} 
+                    onClick={() => handleClientSelect(client)}
+                    selected={selectedClient?.id === client.id}
+                  >
+                    {client.name}
+                  </MenuItem>
+                ))
+              )}
+              <Divider />
+              <MenuItem 
+                component={RouterLink} 
+                to="/clients"
+                onClick={handleClientMenuClose}
+              >
+                Manage Clients
+              </MenuItem>
+            </Menu>
+
+            {selectedClient && (
+              <>
+                <Chip
+                  icon={<SettingsEthernetIcon />}
+                  label={selectedInterface ? selectedInterface.name : "Select Interface"}
+                  onClick={handleInterfaceMenuOpen}
+                  color={selectedInterface ? "primary" : "default"}
+                  variant="outlined"
+                  sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+                  deleteIcon={<KeyboardArrowDownIcon />}
+                  onDelete={handleInterfaceMenuOpen}
+                />
+                
+                <Menu
+                  anchorEl={interfaceMenuAnchor}
+                  open={Boolean(interfaceMenuAnchor)}
+                  onClose={handleInterfaceMenuClose}
+                >
+                  {interfaces.length === 0 ? (
+                    <MenuItem disabled>
+                      No interfaces available for this client
+                    </MenuItem>
+                  ) : (
+                    interfaces.map(interfaceObj => (
+                      <MenuItem 
+                        key={interfaceObj.id} 
+                        onClick={() => handleInterfaceSelect(interfaceObj)}
+                        selected={selectedInterface?.id === interfaceObj.id}
+                      >
+                        {interfaceObj.name}
+                      </MenuItem>
+                    ))
+                  )}
+                  <Divider />
+                  <MenuItem 
+                    component={RouterLink} 
+                    to="/interfaces"
+                    onClick={handleInterfaceMenuClose}
+                  >
+                    Manage Interfaces
+                  </MenuItem>
+                </Menu>
+              </>
+            )}
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton 
+              color="inherit" 
+              sx={{ mr: 1 }}
+              onClick={handleUserMenuOpen}
+            >
+              <AccountCircle />
+            </IconButton>
+            <Typography 
+              variant="body2" 
+              sx={{ mr: 1, cursor: 'pointer' }}
+              onClick={handleUserMenuOpen}
+            >
+              {user.username}
+            </Typography>
+            
+            <Menu
+              anchorEl={userMenuAnchor}
+              open={Boolean(userMenuAnchor)}
+              onClose={handleUserMenuClose}
+            >
+              <MenuItem onClick={handleUserMenuClose}>Profile</MenuItem>
+              <MenuItem onClick={handleUserMenuClose}>Settings</MenuItem>
+              <Divider />
+              <MenuItem onClick={handleLogout}>Logout</MenuItem>
+            </Menu>
+          </Box>
         </Box>
       </Toolbar>
     </AppBar>
