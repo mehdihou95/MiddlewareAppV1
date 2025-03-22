@@ -8,13 +8,17 @@ import {
   Alert,
   Container,
   CircularProgress,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import axios, { AxiosError } from 'axios';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -38,36 +42,39 @@ const Login = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/login', {
-        method: 'POST',
-        body: new URLSearchParams({
-          username: formUsername,
-          password: formPassword
-        }),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        // Check user status
-        const userResponse = await fetch('http://localhost:8080/api/user', {
-          credentials: 'include'
-        });
-        
-        if (userResponse.ok) {
-          // Force a page reload to update the authentication state
-          window.location.href = from;
-        } else {
-          setError('Failed to get user information');
-        }
+      // Use the login function from AuthContext
+      const success = await login(formUsername, formPassword);
+      
+      if (success) {
+        navigate(from);
       } else {
         setError('Invalid username or password');
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('An error occurred during login');
+    } catch (error: unknown) {
+      console.error('Login error:', error);
+      
+      // Type guard to check if error is an AxiosError
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError;
+        
+        if (axiosError.response) {
+          if (axiosError.response.status === 401) {
+            setError('Invalid username or password');
+          } else if (axiosError.response.status === 429) {
+            setError('Too many login attempts. Please try again later.');
+          } else {
+            // Type assertion for data
+            const errorData = axiosError.response.data as { error?: string };
+            setError(`Error: ${errorData.error || 'Unknown error'}`);
+          }
+        } else if (axiosError.request) {
+          setError('Network error. Please check your connection.');
+        } else {
+          setError('An unexpected error occurred');
+        }
+      } else {
+        setError('An unexpected error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -130,6 +137,18 @@ const Login = () => {
                 'aria-label': 'Password',
               }}
             />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  value="remember"
+                  color="primary"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={isLoading}
+                />
+              }
+              label="Remember me"
+            />
             <Button
               type="submit"
               fullWidth
@@ -151,4 +170,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;

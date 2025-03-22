@@ -79,4 +79,21 @@ mvnw.cmd
 *.log
 
 # Environment Variables
-.env 
+.env
+
+# Node.js
+/frontend/build/
+/frontend/dist/
+/frontend/.env
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+
+# Java
+/backend/target/
+/backend/.mvn/
+/backend/*.log
+/backend/.env
+
+# OS
+Thumbs.db 

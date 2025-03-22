@@ -10,13 +10,21 @@ import {
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import axios from 'axios';
+import { useClientInterface } from '../context/ClientInterfaceContext';
+import ClientInterfaceSelector from './ClientInterfaceSelector';
 
 const FileUpload = () => {
+  const { selectedClient, selectedInterface } = useClientInterface();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const onDrop = async (acceptedFiles: File[]) => {
+    if (!selectedClient || !selectedInterface) {
+      setError('Please select a client and interface before uploading files');
+      return;
+    }
+
     setError(null);
     setSuccess(null);
     setUploading(true);
@@ -25,6 +33,8 @@ const FileUpload = () => {
     acceptedFiles.forEach((file) => {
       formData.append('file', file);
     });
+    formData.append('clientId', selectedClient.id.toString());
+    formData.append('interfaceId', selectedInterface.id.toString());
 
     try {
       await axios.post('/api/upload', formData, {
@@ -35,7 +45,12 @@ const FileUpload = () => {
       });
       setSuccess(`Successfully uploaded ${acceptedFiles.length} file(s)`);
     } catch (err) {
-      setError('Failed to upload files. Please try again.');
+      const axiosError = err as any;
+      let errorMessage = 'Failed to upload files. Please try again.';
+      if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      }
+      setError(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -46,6 +61,7 @@ const FileUpload = () => {
     accept: {
       'application/xml': ['.xml'],
     },
+    disabled: !selectedClient || !selectedInterface,
   });
 
   return (
@@ -53,28 +69,39 @@ const FileUpload = () => {
       <Typography variant="h4" gutterBottom>
         Upload XML Files
       </Typography>
-      <Paper
-        {...getRootProps()}
-        sx={{
-          p: 6,
-          mt: 3,
-          border: '2px dashed',
-          borderColor: isDragActive ? 'primary.main' : 'grey.300',
-          backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
-          cursor: 'pointer',
-        }}
-      >
-        <input {...getInputProps()} />
-        <CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-        <Typography variant="h6" gutterBottom>
-          {isDragActive
-            ? 'Drop the files here...'
-            : 'Drag and drop XML files here, or click to select files'}
-        </Typography>
-        <Typography variant="body2" color="textSecondary">
-          Only XML files are accepted
-        </Typography>
-      </Paper>
+
+      <ClientInterfaceSelector required />
+
+      {!selectedClient || !selectedInterface ? (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          Please select a client and interface before uploading files
+        </Alert>
+      ) : (
+        <Paper
+          {...getRootProps()}
+          sx={{
+            p: 6,
+            mt: 3,
+            border: '2px dashed',
+            borderColor: isDragActive ? 'primary.main' : 'grey.300',
+            backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
+            cursor: 'pointer',
+            opacity: uploading ? 0.7 : 1,
+            pointerEvents: uploading ? 'none' : 'auto',
+          }}
+        >
+          <input {...getInputProps()} />
+          <CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+          <Typography variant="h6" gutterBottom>
+            {isDragActive
+              ? 'Drop the files here...'
+              : 'Drag and drop XML files here, or click to select files'}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Only XML files are accepted
+          </Typography>
+        </Paper>
+      )}
 
       {uploading && (
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
@@ -94,14 +121,17 @@ const FileUpload = () => {
         </Alert>
       )}
 
-      <Button
-        variant="contained"
-        color="primary"
-        sx={{ mt: 3 }}
-        onClick={() => document.querySelector('input')?.click()}
-      >
-        Select Files
-      </Button>
+      {selectedClient && selectedInterface && (
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ mt: 3 }}
+          onClick={() => document.querySelector('input')?.click()}
+          disabled={uploading}
+        >
+          Select Files
+        </Button>
+      )}
     </Box>
   );
 };

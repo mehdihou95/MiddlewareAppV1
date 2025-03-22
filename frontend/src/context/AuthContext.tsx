@@ -26,12 +26,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const checkAuthStatus = async () => {
     try {
-      const response = await axios.get('/api/user');
+      const response = await axios.get('/api/user', {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       if (response.status === 200 && response.data) {
         setUser({
           username: response.data.username,
@@ -42,13 +47,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
       }
     } catch (err) {
+      // Silently handle initial auth check failure
       setUser(null);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
+    // Initial auth check without loading state
     checkAuthStatus();
   }, []);
 
@@ -70,10 +75,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: cleanPassword
       });
 
-      const response = await axios.post('/login', data, {
+      const response = await axios.post('/api/auth/login', data, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        },
+        withCredentials: true
       });
 
       if (response.status === 200) {
@@ -93,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await axios.post('/logout');
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
       setUser(null);
       setError(null);
     } catch (err) {

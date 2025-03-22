@@ -14,9 +14,12 @@ import {
   TextField,
   Snackbar,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import axios, { AxiosError } from 'axios';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { useClientInterface } from '../context/ClientInterfaceContext';
+import ClientInterfaceSelector from '../components/ClientInterfaceSelector';
 
 interface XmlElement {
   name: string;
@@ -27,6 +30,8 @@ interface XmlElement {
 
 interface MappingRule {
   id?: number;
+  clientId: number;
+  interfaceId: number;
   xmlPath: string;
   databaseField: string;
   xsdElement: string;
@@ -43,23 +48,16 @@ interface SnackbarState {
 }
 
 const TransformPage: React.FC = () => {
+  const { selectedClient, selectedInterface } = useClientInterface();
   const [xmlElements, setXmlElements] = useState<XmlElement[]>([]);
-  const [dbFields] = useState<{ field: string; type: string }[]>([
-    { field: 'ASN_HEADER.asn_number', type: 'String' },
-    { field: 'ASN_HEADER.shipment_date', type: 'LocalDate' },
-    { field: 'ASN_HEADER.supplier_id', type: 'String' },
-    { field: 'ASN_HEADER.supplier_name', type: 'String' },
-    { field: 'ASN_LINE.line_number', type: 'Integer' },
-    { field: 'ASN_LINE.item_number', type: 'String' },
-    { field: 'ASN_LINE.quantity', type: 'Decimal' },
-    { field: 'ASN_LINE.uom', type: 'String' },
-    { field: 'ASN_LINE.description', type: 'String' }
-  ]);
+  const [dbFields, setDbFields] = useState<{ field: string; type: string }[]>([]);
   const [selectedXmlElement, setSelectedXmlElement] = useState<XmlElement | null>(null);
   const [selectedDbField, setSelectedDbField] = useState('');
   const [mappingRules, setMappingRules] = useState<MappingRule[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [newMapping, setNewMapping] = useState<MappingRule>({
+    clientId: 0,
+    interfaceId: 0,
     xmlPath: '',
     databaseField: '',
     xsdElement: '',
@@ -73,21 +71,31 @@ const TransformPage: React.FC = () => {
     message: '',
     severity: 'info'
   });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadXsdStructure();
-    loadMappingRules();
-  }, []);
+    if (selectedClient && selectedInterface) {
+      loadXsdStructure();
+      loadMappingRules();
+      loadDatabaseFields();
+    }
+  }, [selectedClient, selectedInterface]);
 
   const loadXsdStructure = async () => {
+    if (!selectedClient || !selectedInterface) return;
+
     try {
+      setLoading(true);
       setXmlElements([]); // Clear existing elements
-      console.log('Loading XSD structure...');
       const response = await axios.get('http://localhost:8080/api/mapping/xsd-structure', {
-        params: { xsdPath: 'asn.xsd' },
+        params: { 
+          clientId: selectedClient.id,
+          interfaceId: selectedInterface.id,
+          xsdPath: selectedInterface.configuration?.xsdPath || 'asn.xsd'
+        },
         withCredentials: true
       });
-      console.log('XSD structure loaded:', response.data);
+
       if (Array.isArray(response.data) && response.data.length > 0) {
         setXmlElements(response.data);
       } else {
@@ -99,7 +107,6 @@ const TransformPage: React.FC = () => {
       
       let errorMessage = 'Failed to load XML structure';
       if (axiosError.response?.data) {
-        // Try to extract the detailed error message from the response
         const data = axiosError.response.data as any;
         errorMessage = data.message || data.error || JSON.stringify(data);
       } else if (axiosError.message) {
@@ -112,12 +119,46 @@ const TransformPage: React.FC = () => {
         severity: 'error'
       });
       throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDatabaseFields = async () => {
+    if (!selectedClient || !selectedInterface) return;
+
+    try {
+      setLoading(true);
+      const response = await axios.get('http://localhost:8080/api/mapping/database-fields', {
+        params: { 
+          clientId: selectedClient.id,
+          interfaceId: selectedInterface.id
+        },
+        withCredentials: true
+      });
+      setDbFields(response.data);
+    } catch (error) {
+      console.error('Error loading database fields:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to load database fields',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const loadMappingRules = async () => {
+    if (!selectedClient || !selectedInterface) return;
+
     try {
+      setLoading(true);
       const response = await axios.get<MappingRule[]>('http://localhost:8080/api/mapping/rules', {
+        params: { 
+          clientId: selectedClient.id,
+          interfaceId: selectedInterface.id
+        },
         withCredentials: true
       });
       setMappingRules(response.data);
@@ -128,6 +169,8 @@ const TransformPage: React.FC = () => {
         message: 'Failed to load mapping rules',
         severity: 'error'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -137,12 +180,14 @@ const TransformPage: React.FC = () => {
 
   const handleDbFieldClick = (field: string) => {
     setSelectedDbField(field);
-    if (selectedXmlElement) {
+    if (selectedXmlElement && selectedClient && selectedInterface) {
       const isAttribute = selectedXmlElement.path.includes('@');
       const [tableName, fieldName] = field.split('.');
       const dbField = dbFields.find(f => f.field === field);
       
       setNewMapping({
+        clientId: selectedClient.id,
+        interfaceId: selectedInterface.id,
         xmlPath: selectedXmlElement.path,
         databaseField: fieldName,
         xsdElement: selectedXmlElement.name,
@@ -156,6 +201,15 @@ const TransformPage: React.FC = () => {
   };
 
   const handleSaveMapping = async () => {
+    if (!selectedClient || !selectedInterface) {
+      setSnackbar({
+        open: true,
+        message: 'Please select a client and interface first',
+        severity: 'error'
+      });
+      return;
+    }
+
     try {
       if (!newMapping.xmlPath || !newMapping.databaseField) {
         setSnackbar({
@@ -210,8 +264,21 @@ const TransformPage: React.FC = () => {
   };
 
   const handleSaveAllMappings = async () => {
+    if (!selectedClient || !selectedInterface) {
+      setSnackbar({
+        open: true,
+        message: 'Please select a client and interface first',
+        severity: 'error'
+      });
+      return;
+    }
+
     try {
-      await axios.post('http://localhost:8080/api/mapping/save-configuration', mappingRules, {
+      await axios.post('http://localhost:8080/api/mapping/save-configuration', {
+        clientId: selectedClient.id,
+        interfaceId: selectedInterface.id,
+        mappings: mappingRules
+      }, {
         withCredentials: true
       });
       setSnackbar({
@@ -282,6 +349,7 @@ const TransformPage: React.FC = () => {
             color="primary"
             onClick={handleRefreshXsd}
             startIcon={<RefreshIcon />}
+            disabled={!selectedClient || !selectedInterface}
           >
             Refresh XSD
           </Button>
@@ -289,62 +357,94 @@ const TransformPage: React.FC = () => {
             variant="contained"
             color="primary"
             onClick={handleSaveAllMappings}
-            disabled={mappingRules.length === 0}
+            disabled={!selectedClient || !selectedInterface || mappingRules.length === 0}
           >
             Save Configuration
           </Button>
         </Box>
       </Box>
-      
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        {/* XML Elements Panel */}
-        <Paper sx={{ flex: 1, p: 2, maxHeight: '400px', overflow: 'auto' }}>
-          <Typography variant="h6" gutterBottom>XML Elements</Typography>
-          <List>
-            {xmlElements.map((element, index) => (
-              <ListItem
-                key={index}
-                button
-                selected={selectedXmlElement?.path === element.path}
-                onClick={() => handleXmlElementClick(element)}
-              >
-                <ListItemText 
-                  primary={element.name}
-                  secondary={element.path}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
 
-        {/* Database Fields Panel */}
-        <Paper sx={{ flex: 1, p: 2, maxHeight: '400px', overflow: 'auto' }}>
-          <Typography variant="h6" gutterBottom>Database Fields</Typography>
-          <List>
-            {dbFields.map((field, index) => (
-              <ListItem
-                key={index}
-                button
-                selected={selectedDbField === field.field}
-                onClick={() => handleDbFieldClick(field.field)}
-              >
-                <ListItemText 
-                  primary={field.field}
-                  secondary={`Type: ${field.type}`}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      </Box>
+      <ClientInterfaceSelector required />
 
-      {/* Mapping Rules Table */}
-      <Paper sx={{ p: 2, mt: 2 }}>
-        <Typography variant="h6" gutterBottom>Mapping Rules</Typography>
-        <List>
-          {mappingRules.map((rule: MappingRule) => renderMappingRule(rule))}
-        </List>
-      </Paper>
+      {!selectedClient || !selectedInterface ? (
+        <Alert severity="info">
+          Please select a client and interface to view and manage mapping rules
+        </Alert>
+      ) : loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {/* XML Elements Panel */}
+            <Paper sx={{ flex: 1, p: 2, maxHeight: '400px', overflow: 'auto' }}>
+              <Typography variant="h6" gutterBottom>XML Elements</Typography>
+              <List>
+                {xmlElements.length === 0 ? (
+                  <ListItem>
+                    <ListItemText primary="No XML elements available" />
+                  </ListItem>
+                ) : (
+                  xmlElements.map((element, index) => (
+                    <ListItem
+                      key={index}
+                      button
+                      selected={selectedXmlElement?.path === element.path}
+                      onClick={() => handleXmlElementClick(element)}
+                    >
+                      <ListItemText 
+                        primary={element.name}
+                        secondary={element.path}
+                      />
+                    </ListItem>
+                  ))
+                )}
+              </List>
+            </Paper>
+
+            {/* Database Fields Panel */}
+            <Paper sx={{ flex: 1, p: 2, maxHeight: '400px', overflow: 'auto' }}>
+              <Typography variant="h6" gutterBottom>Database Fields</Typography>
+              <List>
+                {dbFields.length === 0 ? (
+                  <ListItem>
+                    <ListItemText primary="No database fields available" />
+                  </ListItem>
+                ) : (
+                  dbFields.map((field, index) => (
+                    <ListItem
+                      key={index}
+                      button
+                      selected={selectedDbField === field.field}
+                      onClick={() => handleDbFieldClick(field.field)}
+                    >
+                      <ListItemText 
+                        primary={field.field}
+                        secondary={`Type: ${field.type}`}
+                      />
+                    </ListItem>
+                  ))
+                )}
+              </List>
+            </Paper>
+          </Box>
+
+          {/* Mapping Rules Table */}
+          <Paper sx={{ p: 2, mt: 2 }}>
+            <Typography variant="h6" gutterBottom>Mapping Rules</Typography>
+            <List>
+              {mappingRules.length === 0 ? (
+                <ListItem>
+                  <ListItemText primary="No mapping rules defined yet" />
+                </ListItem>
+              ) : (
+                mappingRules.map((rule: MappingRule) => renderMappingRule(rule))
+              )}
+            </List>
+          </Paper>
+        </>
+      )}
 
       {/* Mapping Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
