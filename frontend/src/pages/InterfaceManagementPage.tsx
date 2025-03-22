@@ -32,6 +32,9 @@ import { interfaceService } from '../services/interfaceService';
 import { Interface } from '../types';
 import { useClientInterface } from '../context/ClientInterfaceContext';
 import ClientInterfaceSelector from '../components/ClientInterfaceSelector';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 const InterfaceManagementPage: React.FC = () => {
   const { selectedClient, refreshInterfaces } = useClientInterface();
@@ -40,17 +43,19 @@ const InterfaceManagementPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingInterface, setEditingInterface] = useState<Interface | null>(null);
-  const [formData, setFormData] = useState<Omit<Interface, 'id' | 'clientId'>>({
+  const [formData, setFormData] = useState<Omit<Interface, 'id' | 'clientId' | 'createdAt' | 'updatedAt'>>({
     name: '',
     type: 'XML',
     description: '',
-    status: 'ACTIVE',
-    configuration: {},
+    isActive: true,
+    priority: 0,
+    rootElement: '',
+    namespace: '',
+    schemaPath: ''
   });
   const [formErrors, setFormErrors] = useState({
     name: '',
     type: '',
-    status: '',
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [interfaceToDelete, setInterfaceToDelete] = useState<Interface | null>(null);
@@ -87,8 +92,11 @@ const InterfaceManagementPage: React.FC = () => {
         name: interfaceObj.name,
         type: interfaceObj.type,
         description: interfaceObj.description || '',
-        status: interfaceObj.status,
-        configuration: interfaceObj.configuration || {},
+        isActive: interfaceObj.isActive,
+        priority: interfaceObj.priority || 0,
+        rootElement: interfaceObj.rootElement || '',
+        namespace: interfaceObj.namespace || '',
+        schemaPath: interfaceObj.schemaPath || ''
       });
     } else {
       setEditingInterface(null);
@@ -96,8 +104,11 @@ const InterfaceManagementPage: React.FC = () => {
         name: '',
         type: 'XML',
         description: '',
-        status: 'ACTIVE',
-        configuration: {},
+        isActive: true,
+        priority: 0,
+        rootElement: '',
+        namespace: '',
+        schemaPath: ''
       });
     }
     setOpenDialog(true);
@@ -110,13 +121,15 @@ const InterfaceManagementPage: React.FC = () => {
       name: '',
       type: 'XML',
       description: '',
-      status: 'ACTIVE',
-      configuration: {},
+      isActive: true,
+      priority: 0,
+      rootElement: '',
+      namespace: '',
+      schemaPath: ''
     });
     setFormErrors({
       name: '',
       type: '',
-      status: '',
     });
   };
 
@@ -124,7 +137,6 @@ const InterfaceManagementPage: React.FC = () => {
     const errors = {
       name: '',
       type: '',
-      status: '',
     };
     let isValid = true;
 
@@ -138,28 +150,35 @@ const InterfaceManagementPage: React.FC = () => {
       isValid = false;
     }
 
-    if (!formData.status) {
-      errors.status = 'Status is required';
-      isValid = false;
-    }
-
     setFormErrors(errors);
     return isValid;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!validateForm() || !selectedClient) return;
 
     try {
-      const interfaceData = {
+      const backendInterfaceData = {
         ...formData,
-        clientId: selectedClient.id,
+        clientId: selectedClient.id
       };
 
       if (editingInterface) {
-        await interfaceService.updateInterface(editingInterface.id, interfaceData);
+        await interfaceService.updateInterface(editingInterface.id, backendInterfaceData);
       } else {
-        await interfaceService.createInterface(interfaceData);
+        await axios.post(
+          `${API_URL}/clients/${selectedClient.id}/interfaces`,
+          backendInterfaceData,
+          {
+            withCredentials: true,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Client-ID': selectedClient.id.toString()
+            }
+          }
+        );
       }
       handleCloseDialog();
       loadInterfaces();
@@ -251,8 +270,8 @@ const InterfaceManagementPage: React.FC = () => {
                         <TableCell>{interfaceObj.description || '-'}</TableCell>
                         <TableCell>
                           <Chip
-                            label={interfaceObj.status}
-                            color={interfaceObj.status === 'ACTIVE' ? 'success' : 'default'}
+                            label={interfaceObj.isActive ? 'Active' : 'Inactive'}
+                            color={interfaceObj.isActive ? 'success' : 'default'}
                             size="small"
                           />
                         </TableCell>
@@ -285,71 +304,57 @@ const InterfaceManagementPage: React.FC = () => {
 
           {/* Create/Edit Dialog */}
           <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-            <DialogTitle>
-              {editingInterface ? 'Edit Interface' : 'Add New Interface'}
-            </DialogTitle>
-            <DialogContent>
-              <Box sx={{ pt: 2 }}>
-                <TextField
-                  fullWidth
-                  label="Name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  error={!!formErrors.name}
-                  helperText={formErrors.name}
-                  sx={{ mb: 2 }}
-                />
-                <FormControl fullWidth error={!!formErrors.type} sx={{ mb: 2 }}>
-                  <InputLabel>Type</InputLabel>
-                  <Select
-                    value={formData.type}
-                    label="Type"
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  >
-                    <MenuItem value="XML">XML</MenuItem>
-                    <MenuItem value="JSON">JSON</MenuItem>
-                    <MenuItem value="CSV">CSV</MenuItem>
-                    <MenuItem value="EDI">EDI</MenuItem>
-                  </Select>
-                  {formErrors.type && (
-                    <Typography color="error" variant="caption">
-                      {formErrors.type}
-                    </Typography>
-                  )}
-                </FormControl>
-                <TextField
-                  fullWidth
-                  label="Description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  multiline
-                  rows={3}
-                  sx={{ mb: 2 }}
-                />
-                <FormControl fullWidth error={!!formErrors.status}>
-                  <InputLabel>Status</InputLabel>
-                  <Select
-                    value={formData.status}
-                    label="Status"
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as Interface['status'] })}
-                  >
-                    <MenuItem value="ACTIVE">Active</MenuItem>
-                    <MenuItem value="INACTIVE">Inactive</MenuItem>
-                  </Select>
-                  {formErrors.status && (
-                    <Typography color="error" variant="caption">
-                      {formErrors.status}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog}>Cancel</Button>
-              <Button onClick={handleSubmit} variant="contained">
-                {editingInterface ? 'Update' : 'Create'}
-              </Button>
-            </DialogActions>
+            <form onSubmit={handleSubmit} noValidate>
+              <DialogTitle>
+                {editingInterface ? 'Edit Interface' : 'Add New Interface'}
+              </DialogTitle>
+              <DialogContent>
+                <Box sx={{ pt: 2 }}>
+                  <TextField
+                    fullWidth
+                    label="Name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    error={!!formErrors.name}
+                    helperText={formErrors.name}
+                    sx={{ mb: 2 }}
+                  />
+                  <FormControl fullWidth error={!!formErrors.type} sx={{ mb: 2 }}>
+                    <InputLabel>Type</InputLabel>
+                    <Select
+                      value={formData.type}
+                      label="Type"
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    >
+                      <MenuItem value="XML">XML</MenuItem>
+                      <MenuItem value="JSON">JSON</MenuItem>
+                      <MenuItem value="CSV">CSV</MenuItem>
+                      <MenuItem value="EDI">EDI</MenuItem>
+                    </Select>
+                    {formErrors.type && (
+                      <Typography color="error" variant="caption">
+                        {formErrors.type}
+                      </Typography>
+                    )}
+                  </FormControl>
+                  <TextField
+                    fullWidth
+                    label="Description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    multiline
+                    rows={3}
+                    sx={{ mb: 2 }}
+                  />
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCloseDialog}>Cancel</Button>
+                <Button type="submit" variant="contained">
+                  {editingInterface ? 'Update' : 'Create'}
+                </Button>
+              </DialogActions>
+            </form>
           </Dialog>
 
           {/* Delete Confirmation Dialog */}

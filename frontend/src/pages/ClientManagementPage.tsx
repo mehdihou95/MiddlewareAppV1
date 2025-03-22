@@ -45,11 +45,13 @@ const ClientManagementPage: React.FC = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [formData, setFormData] = useState<Omit<Client, 'id'>>({
     name: '',
+    code: '',
     description: '',
     status: 'ACTIVE',
   });
   const [formErrors, setFormErrors] = useState({
     name: '',
+    code: '',
     status: '',
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -115,6 +117,7 @@ const ClientManagementPage: React.FC = () => {
       setEditingClient(client);
       setFormData({
         name: client.name,
+        code: client.code,
         description: client.description || '',
         status: client.status,
       });
@@ -122,6 +125,7 @@ const ClientManagementPage: React.FC = () => {
       setEditingClient(null);
       setFormData({
         name: '',
+        code: '',
         description: '',
         status: 'ACTIVE',
       });
@@ -134,11 +138,13 @@ const ClientManagementPage: React.FC = () => {
     setEditingClient(null);
     setFormData({
       name: '',
+      code: '',
       description: '',
       status: 'ACTIVE',
     });
     setFormErrors({
       name: '',
+      code: '',
       status: '',
     });
   };
@@ -146,12 +152,18 @@ const ClientManagementPage: React.FC = () => {
   const validateForm = () => {
     const errors = {
       name: '',
+      code: '',
       status: '',
     };
     let isValid = true;
 
     if (!formData.name.trim()) {
       errors.name = 'Name is required';
+      isValid = false;
+    }
+
+    if (!formData.code.trim()) {
+      errors.code = 'Code is required';
       isValid = false;
     }
 
@@ -255,6 +267,15 @@ const ClientManagementPage: React.FC = () => {
                       Name
                     </TableSortLabel>
                   </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={orderBy === 'code'}
+                      direction={orderBy === 'code' ? order : 'asc'}
+                      onClick={() => handleRequestSort('code')}
+                    >
+                      Code
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell>Description</TableCell>
                   <TableCell>
                     <TableSortLabel
@@ -271,7 +292,7 @@ const ClientManagementPage: React.FC = () => {
               <TableBody>
                 {clients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} align="center">
+                    <TableCell colSpan={5} align="center">
                       <Typography sx={{ py: 2 }}>
                         No clients found. Click "Add Client" to create one.
                       </Typography>
@@ -281,6 +302,7 @@ const ClientManagementPage: React.FC = () => {
                   clients.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell>{client.name}</TableCell>
+                      <TableCell>{client.code}</TableCell>
                       <TableCell>{client.description || '-'}</TableCell>
                       <TableCell>
                         <Chip
@@ -327,34 +349,44 @@ const ClientManagementPage: React.FC = () => {
               {editingClient ? 'Edit Client' : 'Add New Client'}
             </DialogTitle>
             <DialogContent>
-              <Box sx={{ pt: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
                 <TextField
-                  fullWidth
                   label="Name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   error={!!formErrors.name}
                   helperText={formErrors.name}
-                  sx={{ mb: 2 }}
+                  fullWidth
+                  required
                 />
                 <TextField
+                  label="Code"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  error={!!formErrors.code}
+                  helperText={formErrors.code}
                   fullWidth
+                  required
+                />
+                <TextField
                   label="Description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   multiline
                   rows={3}
-                  sx={{ mb: 2 }}
+                  fullWidth
                 />
-                <FormControl fullWidth error={!!formErrors.status}>
-                  <InputLabel>Status</InputLabel>
+                <FormControl fullWidth>
+                  <InputLabel required>Status</InputLabel>
                   <Select
                     value={formData.status}
                     label="Status"
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as Client['status'] })}
+                    error={!!formErrors.status}
                   >
                     <MenuItem value="ACTIVE">Active</MenuItem>
                     <MenuItem value="INACTIVE">Inactive</MenuItem>
+                    <MenuItem value="SUSPENDED">Suspended</MenuItem>
                   </Select>
                   {formErrors.status && (
                     <Typography color="error" variant="caption">
