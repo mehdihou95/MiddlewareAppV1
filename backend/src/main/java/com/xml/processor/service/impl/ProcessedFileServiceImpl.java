@@ -5,6 +5,9 @@ import com.xml.processor.model.ProcessedFile;
 import com.xml.processor.repository.ProcessedFileRepository;
 import com.xml.processor.service.interfaces.ProcessedFileService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -151,5 +154,96 @@ public class ProcessedFileServiceImpl implements ProcessedFileService {
         } else {
             processedFileRepository.deleteById(id);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProcessedFile> getProcessedFiles(int page, int size, String sortBy, String direction, 
+            String fileNameFilter, String statusFilter, LocalDateTime startDate, LocalDateTime endDate) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        
+        // Apply filters if provided
+        if (fileNameFilter != null && !fileNameFilter.isEmpty()) {
+            return processedFileRepository.findByFileNameContainingIgnoreCase(fileNameFilter, pageRequest);
+        } else if (statusFilter != null && !statusFilter.isEmpty()) {
+            return processedFileRepository.findByStatus(statusFilter, pageRequest);
+        } else if (startDate != null && endDate != null) {
+            return processedFileRepository.findByProcessedDateBetween(startDate, endDate, pageRequest);
+        }
+        
+        // No filters, return all with pagination
+        return processedFileRepository.findAll(pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProcessedFile> getProcessedFilesByClient(Long clientId, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return processedFileRepository.findByClientId(clientId, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProcessedFile> searchProcessedFiles(String fileName, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return processedFileRepository.findByFileNameContainingIgnoreCase(fileName, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProcessedFile> getProcessedFilesByStatus(String status, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return processedFileRepository.findByStatus(status, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProcessedFile> getProcessedFilesByDateRange(LocalDateTime startDate, LocalDateTime endDate, 
+            int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return processedFileRepository.findByProcessedDateBetween(startDate, endDate, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProcessedFile> getProcessedFilesByClientAndStatus(Long clientId, String status, 
+            int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return processedFileRepository.findByClientIdAndStatus(clientId, status, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProcessedFile> getProcessedFilesByClientAndDateRange(Long clientId, LocalDateTime startDate, 
+            LocalDateTime endDate, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return processedFileRepository.findByClientIdAndProcessedDateBetween(clientId, startDate, endDate, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProcessedFile> getProcessedFilesByStatus(String status) {
+        return processedFileRepository.findByStatus(status);
     }
 } 

@@ -26,6 +26,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class XmlProcessorService {
@@ -42,7 +43,7 @@ public class XmlProcessorService {
     private ProcessedFileRepository processedFileRepository;
 
     @Transactional
-    public ProcessedFile processXmlFile(MultipartFile file) {
+    public ProcessedFile processXmlFile(MultipartFile file, Long interfaceId) {
         try {
             // Parse XML document
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -129,5 +130,15 @@ public class XmlProcessorService {
      */
     public List<ProcessedFile> getErrorFiles() {
         return processedFileRepository.findByStatus("ERROR");
+    }
+
+    public CompletableFuture<ProcessedFile> processXmlFileAsync(MultipartFile file, Long interfaceId) {
+        // Implementation of processXmlFileAsync method
+        throw new UnsupportedOperationException("Method not implemented");
+    }
+
+    public void reprocessFile(Long fileId) {
+        // Implementation of reprocessFile method
+        throw new UnsupportedOperationException("Method not implemented");
     }
 } 

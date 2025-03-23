@@ -79,4 +79,45 @@ mvnw.cmd
 *.log
 
 # Environment Variables
-.env 
+.env
+
+# Compiled files
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Logs
+*.log
+logs/
+log/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Build directories
+target/
+build/
+out/
+dist/
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+application-*.properties
+!application.properties
+!application-example.properties
+
+# System files
+.DS_Store
+Thumbs.db 

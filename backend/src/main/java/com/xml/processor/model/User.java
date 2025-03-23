@@ -1,68 +1,64 @@
 package com.xml.processor.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.FetchType;
+import jakarta.persistence.*;
+import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
 @Table(name = "users")
+@Data
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
     private String username;
 
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
+    private String email;
+
+    @Column(name = "first_name")
+    private String firstName;
+
+    @Column(name = "last_name")
+    private String lastName;
+
+    @Column(nullable = false)
+    private boolean enabled = true;
+
     @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role")
     private Set<String> roles;
 
-    public User() {}
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-    public User(String username, String password, Set<String> roles) {
-        this.username = username;
-        this.password = password;
-        this.roles = roles;
-    }
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-    public Long getId() {
-        return id;
-    }
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @Column(name = "failed_login_attempts")
+    private Integer failedLoginAttempts = 0;
 
-    public String getUsername() {
-        return username;
-    }
+    @Column(name = "account_locked")
+    private boolean accountLocked = false;
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public Set<String> getRoles() {
-        return roles;
-    }
-
-    public void setRoles(Set<String> roles) {
-        this.roles = roles;
-    }
+    @Column(name = "password_reset_expiry")
+    private LocalDateTime passwordResetExpiry;
 } 

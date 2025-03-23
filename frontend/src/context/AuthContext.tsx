@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
-import qs from 'qs';
 
 // Configure axios defaults
-axios.defaults.withCredentials = true;
 axios.defaults.baseURL = 'http://localhost:8080';
 
 interface User {
@@ -29,14 +27,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Set up axios interceptors for authentication
+  useEffect(() => {
+    // Add a request interceptor to include JWT token in headers
+    const requestInterceptor = axios.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+          config.headers['Authorization'] = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Add a response interceptor to handle token refresh
+    const responseInterceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+        
+        // If error is 401 and not a retry
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+          
+          try {
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (refreshToken) {
+              const response = await axios.post('/api/auth/refresh', { refreshToken });
+              const { token } = response.data;
+              
+              localStorage.setItem('token', token);
+              originalRequest.headers['Authorization'] = `Bearer ${token}`;
+              
+              return axios(originalRequest);
+            }
+          } catch (refreshError) {
+            // If refresh fails, log out
+            logout();
+          }
+        }
+        
+        return Promise.reject(error);
+      }
+    );
+
+    // Clean up interceptors when component unmounts
+    return () => {
+      axios.interceptors.request.eject(requestInterceptor);
+      axios.interceptors.response.eject(responseInterceptor);
+    };
+  }, []);
+
   const checkAuthStatus = async () => {
     try {
-      const response = await axios.get('/api/user', {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setUser(null);
+        return;
+      }
+
+      const response = await axios.get('/api/user');
       if (response.status === 200 && response.data) {
         setUser({
           username: response.data.username,
@@ -47,13 +98,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
       }
     } catch (err) {
-      // Silently handle initial auth check failure
       setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
     }
   };
 
   useEffect(() => {
-    // Initial auth check without loading state
     checkAuthStatus();
   }, []);
 
@@ -70,20 +121,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      const data = qs.stringify({
+      const response = await axios.post('/api/auth/login', {
         username: cleanUsername,
         password: cleanPassword
       });
 
-      const response = await axios.post('/api/auth/login', data, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        withCredentials: true
-      });
-
       if (response.status === 200) {
-        await checkAuthStatus();
+        const { token, refreshToken, ...userData } = response.data;
+        localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refreshToken);
+        
+        setUser({
+          username: userData.username,
+          roles: userData.roles,
+          authenticated: true
+        });
+        
         return true;
       }
       return false;
@@ -99,7 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await axios.post('/api/auth/logout', {}, { withCredentials: true });
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       setUser(null);
       setError(null);
     } catch (err) {
