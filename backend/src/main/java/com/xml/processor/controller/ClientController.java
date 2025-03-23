@@ -1,7 +1,9 @@
 package com.xml.processor.controller;
 
 import com.xml.processor.model.Client;
+import com.xml.processor.model.Interface;
 import com.xml.processor.service.interfaces.ClientService;
+import com.xml.processor.service.interfaces.InterfaceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,9 @@ public class ClientController {
 
     @Autowired
     private ClientService clientService;
+
+    @Autowired
+    private InterfaceService interfaceService;
 
     @PostMapping
     public ResponseEntity<Client> createClient(@RequestBody Client client) {
@@ -57,5 +62,25 @@ public class ClientController {
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @PostMapping("/{clientId}/interfaces")
+    public ResponseEntity<Interface> createClientInterface(
+            @PathVariable Long clientId,
+            @RequestBody Interface interfaceEntity) {
+        return clientService.getClientById(clientId)
+                .map(client -> {
+                    interfaceEntity.setClient(client);
+                    Interface created = interfaceService.createInterface(interfaceEntity);
+                    return ResponseEntity.ok(created);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{clientId}/interfaces")
+    public ResponseEntity<List<Interface>> getClientInterfaces(@PathVariable Long clientId) {
+        return clientService.getClientById(clientId)
+                .map(client -> ResponseEntity.ok(interfaceService.getInterfacesByClient(client)))
+                .orElse(ResponseEntity.notFound().build());
     }
 } 

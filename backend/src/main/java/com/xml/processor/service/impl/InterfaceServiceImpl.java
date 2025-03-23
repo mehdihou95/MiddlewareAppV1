@@ -107,6 +107,11 @@ public class InterfaceServiceImpl implements InterfaceService {
     }
     
     @Override
+    public List<Interface> getInterfacesByClient(Client client) {
+        return interfaceRepository.findByClient(client);
+    }
+    
+    @Override
     public Interface detectInterface(String xmlContent, Long clientId) {
         try {
             // Parse XML content
