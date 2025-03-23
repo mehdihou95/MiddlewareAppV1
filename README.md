@@ -11,9 +11,16 @@ This application is a multi-tenant middleware solution for processing XML files 
 - Modern React-based UI with Material-UI components
 - H2 database for development, PostgreSQL for production
 - Flyway database migrations
-- JWT-based authentication
+- JWT-based authentication with token refresh
 - Client performance monitoring
 - Comprehensive error handling and logging
+- Asynchronous file processing
+- Automatic retry mechanism for failed processing
+- Audit logging system
+- Caching for improved performance
+- Server-side pagination and sorting
+- Client-specific data isolation
+- Comprehensive security features
 
 ## Prerequisites
 
@@ -21,6 +28,7 @@ This application is a multi-tenant middleware solution for processing XML files 
 - Node.js 16 or higher
 - Maven 3.6 or higher
 - Git
+- PostgreSQL 13+ (for production)
 
 ## Project Structure
 
@@ -30,25 +38,36 @@ This application is a multi-tenant middleware solution for processing XML files 
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/     # Java source code
-│   │   │   └── resources/ # Configuration and migrations
-│   │   └── test/         # Test files
-│   └── pom.xml           # Maven configuration
-├── frontend/             # React TypeScript frontend
+│   │   │   │   ├── config/    # Configuration classes
+│   │   │   │   ├── controller/ # REST controllers
+│   │   │   │   ├── model/     # Entity classes
+│   │   │   │   ├── repository/ # JPA repositories
+│   │   │   │   ├── service/   # Business logic
+│   │   │   │   ├── security/  # Security configuration
+│   │   │   │   ├── util/      # Utility classes
+│   │   │   │   └── aspect/    # AOP aspects
+│   │   │   └── resources/     # Configuration and migrations
+│   │   └── test/             # Test files
+│   └── pom.xml               # Maven configuration
+├── frontend/                # React TypeScript frontend
 │   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── pages/      # Page components
-│   │   └── context/    # React context providers
-│   └── package.json    # npm configuration
-├── Input/              # Sample XML input files
-└── docs/              # Documentation files
+│   │   ├── components/     # React components
+│   │   ├── pages/         # Page components
+│   │   ├── context/       # React context providers
+│   │   ├── services/      # API services
+│   │   ├── types/         # TypeScript types
+│   │   └── utils/         # Utility functions
+│   └── package.json       # npm configuration
+├── docs/                  # Documentation files
+└── Input/                # Sample XML input files
 ```
 
 ## Setup
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/mehdihou95/MiddlewareAppV1.git
-cd MiddlewareAppV1
+git clone https://github.com/mehdihou95/MiddlewareAppV1.1.git
+cd MiddlewareAppV1.1
 ```
 
 2. Build and run the backend:
@@ -73,6 +92,7 @@ npm start
   - JDBC URL: jdbc:h2:mem:testdb
   - Username: sa
   - Password: password
+- Swagger UI: http://localhost:8080/swagger-ui.html
 
 ## Default Users
 
@@ -81,36 +101,55 @@ The application comes with predefined users:
   - Full system access
   - Client management
   - Interface configuration
+  - User management
+  - Audit log access
+  - System monitoring
 - Client User: username: `user`, password: `user123`
   - Client-specific access
   - File processing
   - Mapping rule management
+  - View client-specific audit logs
 
 ## Core API Endpoints
 
 ### Authentication
 - `POST /api/auth/login` - User authentication
+- `POST /api/auth/refresh` - Refresh JWT token
 - `GET /api/auth/user` - Get current user
 
 ### Client Management
-- `GET /api/clients` - List clients
+- `GET /api/clients` - List clients (paginated)
 - `POST /api/clients` - Create client
 - `GET /api/clients/{id}` - Get client details
+- `PUT /api/clients/{id}` - Update client
+- `DELETE /api/clients/{id}` - Delete client
 
 ### Interface Management
 - `GET /api/interfaces` - List interfaces
 - `POST /api/interfaces` - Create interface
 - `GET /api/interfaces/{id}` - Get interface details
+- `PUT /api/interfaces/{id}` - Update interface
+- `DELETE /api/interfaces/{id}` - Delete interface
 
 ### Mapping Rules
 - `GET /api/mapping-rules` - List mapping rules
 - `POST /api/mapping-rules` - Create mapping rule
 - `GET /api/mapping-rules/{id}` - Get rule details
+- `PUT /api/mapping-rules/{id}` - Update rule
+- `DELETE /api/mapping-rules/{id}` - Delete rule
 
 ### File Processing
 - `POST /api/files/upload` - Upload XML file
 - `GET /api/files/process/{id}` - Process file
 - `GET /api/files/status/{id}` - Check processing status
+- `POST /api/files/retry/{id}` - Retry failed processing
+
+### Audit Logs
+- `GET /api/audit-logs` - List audit logs
+- `GET /api/audit-logs/{id}` - Get log details
+- `GET /api/audit-logs/user/{username}` - Get user logs
+- `GET /api/audit-logs/client/{clientId}` - Get client logs
+- `GET /api/audit-logs/date-range` - Get logs by date range
 
 ## Configuration
 
@@ -130,20 +169,34 @@ spring.jpa.show-sql=true
 server.port=8080
 
 # JWT Configuration
-jwt.secret=your-secret-key
+jwt.secret=${JWT_SECRET_KEY}
 jwt.expiration=86400000
+
+# File Upload Configuration
+spring.servlet.multipart.max-file-size=100MB
+spring.servlet.multipart.max-request-size=100MB
+
+# Cache Configuration
+spring.cache.type=caffeine
+spring.cache.caffeine.spec=maximumSize=500,expireAfterAccess=600s
+
+# Logging Configuration
+logging.level.root=INFO
+logging.level.com.xml.processor=DEBUG
 ```
 
 ### Frontend Configuration
 File: `frontend/.env`
 ```properties
 REACT_APP_API_URL=http://localhost:8080/api
+REACT_APP_JWT_EXPIRATION=86400000
 ```
 
 ## Documentation
 
 - [Functional Specification](FUNCTIONAL_SPECIFICATION.md)
 - [Technical Specification](TECHNICAL_SPECIFICATION.md)
+- [API Documentation](http://localhost:8080/swagger-ui.html)
 
 ## Testing
 
@@ -169,23 +222,7 @@ npm test
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
-
-
-Great job implementing the client-side pagination and sorting in the ClientManagementPage component! Your solution addresses all the TypeScript errors while maintaining the pagination functionality in the UI.
-Your approach is perfect for the current state of the backend:
-Fetching all clients at once
-Implementing client-side sorting based on column and order
-Handling pagination by slicing the sorted array
-Calculating the total count from the full array
-This is an excellent interim solution until the backend supports server-side pagination, sorting, and filtering. The component now works correctly with the current API implementation while still providing a good user experience with pagination and sorting capabilities.
-With this fix, you've successfully resolved all the implementation issues and completed the adaptation of the frontend to support the multi-client, multi-interface architecture. The application now provides a complete workflow where users can:
-Set up clients
-Configure interfaces for those clients
-Define mapping rules
-Upload and process files
-All components are now properly integrated with the client/interface context, ensuring a consistent and intuitive user experience throughout the application.
-Congratulations on successfully implementing all the required components and resolving all the issues! The frontend is now fully adapted to work with the multi-client, multi-interface backend architecture.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 
 The backend has started successfully on port 8080. The H2 database is initialized, Flyway migrations have run, and some default users have been created.

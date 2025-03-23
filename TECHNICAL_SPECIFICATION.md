@@ -12,6 +12,8 @@ The application follows a microservices architecture with a clear separation bet
 - File Storage System
 - Authentication Service
 - XML Processing Engine
+- Audit Logging Service
+- Caching Service
 
 ## 2. Technology Stack
 
@@ -21,10 +23,13 @@ The application follows a microservices architecture with a clear separation bet
 - **Build Tool**: Maven
 - **Database**: H2 (Development), PostgreSQL (Production)
 - **ORM**: JPA/Hibernate
-- **Security**: Spring Security
+- **Security**: Spring Security with JWT
 - **API Documentation**: Swagger/OpenAPI
 - **Testing**: JUnit, Mockito
 - **Migration**: Flyway
+- **Caching**: Spring Cache
+- **AOP**: Spring AOP for audit logging
+- **Async Processing**: Spring Async
 
 ### 2.2 Frontend
 - **Framework**: React 18.x
@@ -34,12 +39,17 @@ The application follows a microservices architecture with a clear separation bet
 - **HTTP Client**: Axios
 - **Build Tool**: npm/yarn
 - **Testing**: Jest, React Testing Library
+- **Form Handling**: React Hook Form
+- **Validation**: Yup
+- **Error Handling**: Custom error handler
 
 ### 2.3 Development Tools
 - **Version Control**: Git
 - **CI/CD**: GitHub Actions
 - **Code Quality**: SonarQube
 - **IDE**: IntelliJ IDEA/VS Code
+- **API Testing**: Postman
+- **Database Tools**: DBeaver
 
 ## 3. Database Design
 
@@ -51,7 +61,21 @@ CREATE TABLE users (
     username VARCHAR(255) UNIQUE,
     password VARCHAR(255),
     email VARCHAR(255),
-    role VARCHAR(50)
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+    enabled BOOLEAN,
+    account_locked BOOLEAN,
+    failed_login_attempts INTEGER,
+    last_login TIMESTAMP,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+-- User Roles Table
+CREATE TABLE user_roles (
+    user_id BIGINT,
+    role VARCHAR(50),
+    PRIMARY KEY (user_id, role)
 );
 
 -- Clients Table
@@ -59,7 +83,8 @@ CREATE TABLE clients (
     id BIGINT PRIMARY KEY,
     name VARCHAR(255),
     active BOOLEAN,
-    created_at TIMESTAMP
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
 
 -- Interfaces Table
@@ -68,7 +93,9 @@ CREATE TABLE interfaces (
     client_id BIGINT,
     name VARCHAR(255),
     type VARCHAR(50),
-    schema_location VARCHAR(255)
+    schema_location VARCHAR(255),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
 
 -- Mapping Rules Table
@@ -78,7 +105,9 @@ CREATE TABLE mapping_rules (
     interface_id BIGINT,
     name VARCHAR(255),
     rule_content TEXT,
-    required BOOLEAN
+    required BOOLEAN,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
 
 -- Processed Files Table
@@ -88,7 +117,22 @@ CREATE TABLE processed_files (
     interface_id BIGINT,
     filename VARCHAR(255),
     status VARCHAR(50),
-    processed_at TIMESTAMP
+    error_message TEXT,
+    retry_count INTEGER,
+    processed_at TIMESTAMP,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+-- Audit Logs Table
+CREATE TABLE audit_logs (
+    id BIGINT PRIMARY KEY,
+    username VARCHAR(255),
+    client_id BIGINT,
+    action VARCHAR(255),
+    details TEXT,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP
 );
 ```
 
@@ -98,6 +142,7 @@ CREATE TABLE processed_files (
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/auth/user`
+- `POST /api/auth/refresh`
 
 ### 4.2 Client Management
 - `GET /api/clients`
@@ -124,6 +169,14 @@ CREATE TABLE processed_files (
 - `POST /api/files/upload`
 - `GET /api/files/process/{id}`
 - `GET /api/files/status/{id}`
+- `POST /api/files/retry/{id}`
+
+### 4.6 Audit Logs
+- `GET /api/audit-logs`
+- `GET /api/audit-logs/{id}`
+- `GET /api/audit-logs/user/{username}`
+- `GET /api/audit-logs/client/{clientId}`
+- `GET /api/audit-logs/date-range`
 
 ## 5. Security Implementation
 
@@ -132,17 +185,23 @@ CREATE TABLE processed_files (
 - Token expiration and refresh
 - Password encryption using BCrypt
 - CORS configuration
+- CSRF protection
+- Rate limiting
 
 ### 5.2 Authorization
 - Role-based access control
 - Method-level security
 - Client-specific data isolation
+- Custom security annotations
+- Permission-based access
 
 ### 5.3 Data Security
 - HTTPS encryption
 - Input validation
 - SQL injection prevention
 - XSS protection
+- Data encryption at rest
+- Secure file handling
 
 ## 6. XML Processing Engine
 
@@ -151,6 +210,8 @@ CREATE TABLE processed_files (
 - XSD Validator
 - Transformation Engine
 - Rule Processor
+- Error Handler
+- Retry Manager
 
 ### 6.2 Processing Flow
 1. File Upload
@@ -159,6 +220,8 @@ CREATE TABLE processed_files (
 4. Transformation
 5. Result Generation
 6. Status Update
+7. Audit Logging
+8. Error Handling
 
 ## 7. Performance Optimization
 
@@ -166,16 +229,25 @@ CREATE TABLE processed_files (
 - Interface schemas
 - Mapping rules
 - Frequently accessed data
+- User data
+- Client configurations
+- Validation results
 
 ### 7.2 Database
 - Index optimization
 - Query optimization
 - Connection pooling
+- Batch processing
+- Caching layer
+- Query result caching
 
 ### 7.3 File Processing
 - Asynchronous processing
 - Batch processing
 - Parallel execution
+- Chunked file handling
+- Memory optimization
+- Progress tracking
 
 ## 8. Monitoring and Logging
 
@@ -184,12 +256,18 @@ CREATE TABLE processed_files (
 - Error rates
 - Processing times
 - Resource usage
+- Cache hit rates
+- Database performance
+- System health
 
 ### 8.2 Logging
 - Log levels
 - Log rotation
 - Error tracking
 - Audit logging
+- Performance logging
+- Security logging
+- System events
 
 ## 9. Deployment
 
@@ -199,12 +277,17 @@ CREATE TABLE processed_files (
 - PostgreSQL 13+
 - Minimum 4GB RAM
 - 2 CPU cores
+- 50GB storage
+- SSL certificate
 
 ### 9.2 Configuration
 - Environment variables
 - Database configuration
 - File storage configuration
 - Security settings
+- Cache settings
+- Logging configuration
+- Monitoring setup
 
 ### 9.3 Deployment Process
 1. Build frontend
@@ -212,6 +295,9 @@ CREATE TABLE processed_files (
 3. Database migration
 4. Service deployment
 5. Health check
+6. Monitoring setup
+7. Backup configuration
+8. Security verification
 
 ## 10. Testing Strategy
 
@@ -220,15 +306,24 @@ CREATE TABLE processed_files (
 - Repository tests
 - Controller tests
 - Component tests
+- Utility tests
+- Validation tests
+- Security tests
 
 ### 10.2 Integration Testing
 - API endpoint tests
 - Database integration
 - File processing tests
 - Security tests
+- Cache tests
+- Audit logging tests
+- Error handling tests
 
 ### 10.3 Performance Testing
 - Load testing
 - Stress testing
 - Endurance testing
-- Scalability testing 
+- Scalability testing
+- Cache performance
+- Database performance
+- File processing performance 
