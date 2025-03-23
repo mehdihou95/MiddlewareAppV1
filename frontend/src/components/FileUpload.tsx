@@ -1,139 +1,176 @@
-import React, { useState } from 'react';
-import { useDropzone } from 'react-dropzone';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  CircularProgress,
-  Alert,
-} from '@mui/material';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import axios from 'axios';
-import { useClientInterface } from '../context/ClientInterfaceContext';
-import ClientInterfaceSelector from './ClientInterfaceSelector';
+import React, { useState, useCallback } from 'react';
+import { fileUploadService } from '../services/fileUploadService';
+import { ProcessedFile } from '../types';
 
-const FileUpload = () => {
-  const { selectedClient, selectedInterface } = useClientInterface();
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+interface FileUploadProps {
+  clientId: number;
+  interfaceId: number;
+  onUploadSuccess: (processedFile: ProcessedFile) => void;
+  onUploadError: (error: string) => void;
+}
 
-  const onDrop = async (acceptedFiles: File[]) => {
-    if (!selectedClient || !selectedInterface) {
-      setError('Please select a client and interface before uploading files');
+export const FileUpload: React.FC<FileUploadProps> = ({
+  clientId,
+  interfaceId,
+  onUploadSuccess,
+  onUploadError,
+}) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+
+  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      // Validate file size (10MB max)
+      if (!fileUploadService.validateFileSize(selectedFile)) {
+        setError('File size exceeds 10MB limit');
+        return;
+      }
+
+      // Validate file type
+      if (!fileUploadService.validateFileType(selectedFile)) {
+        setError('Invalid file type. Only XML files are allowed');
+        return;
+      }
+
+      setFile(selectedFile);
+      setError('');
+    }
+  }, []);
+
+  const handleUpload = useCallback(async () => {
+    if (!file) {
+      setError('Please select a file to upload');
       return;
     }
 
-    setError(null);
-    setSuccess(null);
-    setUploading(true);
-
-    const formData = new FormData();
-    acceptedFiles.forEach((file) => {
-      formData.append('file', file);
-    });
-    formData.append('clientId', selectedClient.id.toString());
-    formData.append('interfaceId', selectedInterface.id.toString());
-
     try {
-      await axios.post('/api/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        withCredentials: true
-      });
-      setSuccess(`Successfully uploaded ${acceptedFiles.length} file(s)`);
+      setIsUploading(true);
+      setError('');
+      
+      const processedFile = await fileUploadService.uploadFile(file, clientId, interfaceId);
+      onUploadSuccess(processedFile);
+      
+      // Reset form
+      setFile(null);
+      setUploadProgress(0);
     } catch (err) {
-      const axiosError = err as any;
-      let errorMessage = 'Failed to upload files. Please try again.';
-      if (axiosError.response?.data?.message) {
-        errorMessage = axiosError.response.data.message;
-      }
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during upload';
       setError(errorMessage);
+      onUploadError(errorMessage);
     } finally {
-      setUploading(false);
+      setIsUploading(false);
     }
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/xml': ['.xml'],
-    },
-    disabled: !selectedClient || !selectedInterface,
-  });
+  }, [file, clientId, interfaceId, onUploadSuccess, onUploadError]);
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', textAlign: 'center' }}>
-      <Typography variant="h4" gutterBottom>
-        Upload XML Files
-      </Typography>
-
-      <ClientInterfaceSelector required />
-
-      {!selectedClient || !selectedInterface ? (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          Please select a client and interface before uploading files
-        </Alert>
-      ) : (
-        <Paper
-          {...getRootProps()}
-          sx={{
-            p: 6,
-            mt: 3,
-            border: '2px dashed',
-            borderColor: isDragActive ? 'primary.main' : 'grey.300',
-            backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
-            cursor: 'pointer',
-            opacity: uploading ? 0.7 : 1,
-            pointerEvents: uploading ? 'none' : 'auto',
-          }}
-        >
-          <input {...getInputProps()} />
-          <CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-          <Typography variant="h6" gutterBottom>
-            {isDragActive
-              ? 'Drop the files here...'
-              : 'Drag and drop XML files here, or click to select files'}
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            Only XML files are accepted
-          </Typography>
-        </Paper>
-      )}
-
-      {uploading && (
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress />
-        </Box>
-      )}
+    <div className="file-upload-container">
+      <div className="file-input-wrapper">
+        <input
+          type="file"
+          accept=".xml"
+          onChange={handleFileChange}
+          disabled={isUploading}
+          className="file-input"
+        />
+        <label className="file-label">
+          {file ? file.name : 'Choose XML file'}
+        </label>
+      </div>
 
       {error && (
-        <Alert severity="error" sx={{ mt: 3 }}>
+        <div className="error-message">
           {error}
-        </Alert>
+        </div>
       )}
 
-      {success && (
-        <Alert severity="success" sx={{ mt: 3 }}>
-          {success}
-        </Alert>
+      {isUploading && (
+        <div className="progress-bar">
+          <div 
+            className="progress-fill"
+            style={{ width: `${uploadProgress}%` }}
+          />
+        </div>
       )}
 
-      {selectedClient && selectedInterface && (
-        <Button
-          variant="contained"
-          color="primary"
-          sx={{ mt: 3 }}
-          onClick={() => document.querySelector('input')?.click()}
-          disabled={uploading}
-        >
-          Select Files
-        </Button>
-      )}
-    </Box>
+      <button
+        onClick={handleUpload}
+        disabled={!file || isUploading}
+        className={`upload-button ${isUploading ? 'uploading' : ''}`}
+      >
+        {isUploading ? 'Uploading...' : 'Upload'}
+      </button>
+
+      <style jsx>{`
+        .file-upload-container {
+          padding: 20px;
+          border: 2px dashed #ccc;
+          border-radius: 8px;
+          text-align: center;
+        }
+
+        .file-input-wrapper {
+          position: relative;
+          margin-bottom: 15px;
+        }
+
+        .file-input {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+          cursor: pointer;
+        }
+
+        .file-label {
+          display: inline-block;
+          padding: 10px 20px;
+          background-color: #f0f0f0;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .error-message {
+          color: #dc3545;
+          margin: 10px 0;
+        }
+
+        .progress-bar {
+          width: 100%;
+          height: 4px;
+          background-color: #f0f0f0;
+          border-radius: 2px;
+          margin: 10px 0;
+          overflow: hidden;
+        }
+
+        .progress-fill {
+          height: 100%;
+          background-color: #007bff;
+          transition: width 0.3s ease;
+        }
+
+        .upload-button {
+          padding: 10px 20px;
+          background-color: #007bff;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+        }
+
+        .upload-button:disabled {
+          background-color: #ccc;
+          cursor: not-allowed;
+        }
+
+        .upload-button.uploading {
+          background-color: #6c757d;
+        }
+      `}</style>
+    </div>
   );
-};
-
-export default FileUpload; 
+}; 

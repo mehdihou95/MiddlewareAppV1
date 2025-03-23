@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Box, Divider, IconButton, Menu, MenuItem, Chip } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, Divider, IconButton, Menu, MenuItem, Chip, ListItem, ListItemIcon, ListItemText, List } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -16,6 +16,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useClientInterface } from '../context/ClientInterfaceContext';
+import { People as PeopleIcon } from '@mui/icons-material';
 
 const Navigation = () => {
   const location = useLocation();
@@ -310,6 +311,20 @@ const Navigation = () => {
             </Menu>
           </Box>
         </Box>
+        <List>
+          <ListItem button component={RouterLink} to="/audit-logs">
+            <ListItemIcon>
+              <HistoryIcon />
+            </ListItemIcon>
+            <ListItemText primary="Audit Logs" />
+          </ListItem>
+          <ListItem button component={RouterLink} to="/users">
+            <ListItemIcon>
+              <PeopleIcon />
+            </ListItemIcon>
+            <ListItemText primary="User Management" />
+          </ListItem>
+        </List>
       </Toolbar>
     </AppBar>
   );

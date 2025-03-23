@@ -1,6 +1,9 @@
 package com.xml.processor.repository;
 
 import com.xml.processor.model.MappingRule;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -8,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MappingRuleRepository extends BaseRepository<MappingRule> {
+public interface MappingRuleRepository extends JpaRepository<MappingRule, Long> {
     
     @Query("SELECT m FROM MappingRule m WHERE m.client.id = ?1 AND m.name = ?2")
     Optional<MappingRule> findByClient_IdAndName(Long clientId, String name);
@@ -45,4 +48,12 @@ public interface MappingRuleRepository extends BaseRepository<MappingRule> {
      * Find mapping rules by client ID and interface ID
      */
     List<MappingRule> findByClient_IdAndInterfaceEntity_Id(Long clientId, Long interfaceId);
+
+    List<MappingRule> findByInterfaceId(Long interfaceId);
+    Page<MappingRule> findByInterfaceId(Long interfaceId, Pageable pageable);
+    Page<MappingRule> findByNameContainingIgnoreCase(String name, Pageable pageable);
+    Page<MappingRule> findByIsActive(boolean isActive, Pageable pageable);
+    List<MappingRule> findByInterfaceIdAndIsActiveTrue(Long interfaceId);
+    boolean existsByNameAndInterfaceId(String name, Long interfaceId);
+    boolean existsByNameAndInterfaceIdAndIdNot(String name, Long interfaceId, Long id);
 } 

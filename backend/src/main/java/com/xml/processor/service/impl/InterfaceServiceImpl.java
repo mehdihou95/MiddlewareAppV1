@@ -9,7 +9,11 @@ import com.xml.processor.service.interfaces.InterfaceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
     
@@ -161,5 +165,102 @@ public class InterfaceServiceImpl implements InterfaceService {
             logger.error("Error detecting interface: {}", e.getMessage(), e);
             return null;
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Interface> getInterfaces(int page, int size, String sortBy, String direction, 
+            String nameFilter, String typeFilter, Boolean isActiveFilter) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        
+        // Apply filters if provided
+        if (nameFilter != null && !nameFilter.isEmpty()) {
+            return interfaceRepository.findByNameContainingIgnoreCase(nameFilter, pageRequest);
+        } else if (typeFilter != null && !typeFilter.isEmpty()) {
+            return interfaceRepository.findByType(typeFilter, pageRequest);
+        } else if (isActiveFilter != null) {
+            return interfaceRepository.findByIsActive(isActiveFilter, pageRequest);
+        }
+        
+        // No filters, return all with pagination
+        return interfaceRepository.findAll(pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Interface getInterfaceById(Long id) {
+        return interfaceRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Interface not found with id: " + id));
+    }
+
+    @Override
+    @Transactional
+    public Interface createInterface(Interface interfaceEntity) {
+        return interfaceRepository.save(interfaceEntity);
+    }
+
+    @Override
+    @Transactional
+    public Interface updateInterface(Long id, Interface interfaceEntity) {
+        Interface existingInterface = getInterfaceById(id);
+        // Update fields
+        existingInterface.setName(interfaceEntity.getName());
+        existingInterface.setType(interfaceEntity.getType());
+        existingInterface.setDescription(interfaceEntity.getDescription());
+        existingInterface.setIsActive(interfaceEntity.getIsActive());
+        existingInterface.setPriority(interfaceEntity.getPriority());
+        existingInterface.setRootElement(interfaceEntity.getRootElement());
+        existingInterface.setNamespace(interfaceEntity.getNamespace());
+        existingInterface.setSchemaPath(interfaceEntity.getSchemaPath());
+        return interfaceRepository.save(existingInterface);
+    }
+
+    @Override
+    @Transactional
+    public void deleteInterface(Long id) {
+        interfaceRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Interface> getInterfacesByClient(Long clientId, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return interfaceRepository.findByClientId(clientId, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Interface> searchInterfaces(String name, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return interfaceRepository.findByNameContainingIgnoreCase(name, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Interface> getInterfacesByType(String type, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return interfaceRepository.findByType(type, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Interface> getInterfacesByStatus(boolean isActive, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return interfaceRepository.findByIsActive(isActive, pageRequest);
     }
 } 

@@ -8,6 +8,9 @@ import com.xml.processor.repository.InterfaceRepository;
 import com.xml.processor.repository.MappingRuleRepository;
 import com.xml.processor.service.interfaces.MappingRuleService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -148,5 +151,62 @@ public class MappingRuleServiceImpl implements MappingRuleService {
         
         Long clientId = interfaceEntity.getClient().getId();
         return mappingRuleRepository.findByClient_IdAndIsActive(clientId, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<MappingRule> getMappingRules(int page, int size, String sortBy, String direction, 
+            String nameFilter, Boolean isActiveFilter) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        
+        // Apply filters if provided
+        if (nameFilter != null && !nameFilter.isEmpty()) {
+            return mappingRuleRepository.findByNameContainingIgnoreCase(nameFilter, pageRequest);
+        } else if (isActiveFilter != null) {
+            return mappingRuleRepository.findByIsActive(isActiveFilter, pageRequest);
+        }
+        
+        // No filters, return all with pagination
+        return mappingRuleRepository.findAll(pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MappingRule getMappingRuleById(Long id) {
+        return mappingRuleRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Mapping rule not found with id: " + id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<MappingRule> getMappingRulesByInterface(Long interfaceId, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return mappingRuleRepository.findByInterfaceId(interfaceId, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<MappingRule> searchMappingRules(String name, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return mappingRuleRepository.findByNameContainingIgnoreCase(name, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<MappingRule> getMappingRulesByStatus(boolean isActive, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? 
+            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        return mappingRuleRepository.findByIsActive(isActive, pageRequest);
     }
 } 

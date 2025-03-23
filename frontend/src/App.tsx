@@ -14,6 +14,8 @@ import ClientManagementPage from './pages/ClientManagementPage';
 import InterfaceManagementPage from './pages/InterfaceManagementPage';
 import { AuthProvider } from './context/AuthContext';
 import { ClientInterfaceProvider } from './context/ClientInterfaceContext';
+import AuditLogs from './components/AuditLogs';
+import UserManagement from './components/UserManagement';
 
 const App: React.FC = () => {
   return (
@@ -69,6 +71,8 @@ const App: React.FC = () => {
                     </PrivateRoute>
                   }
                 />
+                <Route path="/audit-logs" element={<AuditLogs />} />
+                <Route path="/users" element={<UserManagement />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Container>

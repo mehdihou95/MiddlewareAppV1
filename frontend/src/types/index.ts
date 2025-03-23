@@ -1,9 +1,8 @@
 export interface Client {
   id: number;
   name: string;
-  code: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   description?: string;
+  status: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -11,45 +10,96 @@ export interface Client {
 export interface Interface {
   id: number;
   name: string;
-  clientId: number;
-  type: string;
   description?: string;
-  isActive: boolean;
-  priority?: number;
-  rootElement?: string;
-  namespace?: string;
   schemaPath?: string;
+  clientId: number;
+  status: string;
   createdAt?: string;
   updatedAt?: string;
-  configuration?: {
-    xsdPath?: string;
-    rootElement?: string;
-    namespace?: string;
-    schemaPath?: string;
-  };
 }
 
 export interface MappingRule {
-  id?: number;
-  clientId: number;
+  id: number;
+  sourceField: string;
+  targetField: string;
+  transformationType: string;
   interfaceId: number;
-  xmlPath: string;
-  databaseField: string;
-  xsdElement: string;
-  tableName: string;
-  dataType: string;
-  isAttribute: boolean;
-  description: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ProcessedFile {
   id: number;
-  filename: string;
-  processedDate: string;
+  fileName: string;
   status: string;
-  recordsProcessed: number;
   clientId: number;
-  clientName: string;
   interfaceId: number;
-  interfaceName: string;
+  processedAt?: string;
+  errorMessage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  password?: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  enabled: boolean;
+  roles: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  lastLogin?: string;
+  failedLoginAttempts?: number;
+  accountLocked: boolean;
+  passwordResetToken?: string;
+  passwordResetExpiry?: string;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  pageable: {
+    sort: {
+      sorted: boolean;
+      unsorted: boolean;
+      empty: boolean;
+    };
+    pageNumber: number;
+    pageSize: number;
+    offset: number;
+    paged: boolean;
+    unpaged: boolean;
+  };
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+  first: boolean;
+  sort: {
+    sorted: boolean;
+    unsorted: boolean;
+    empty: boolean;
+  };
+  numberOfElements: number;
+  size: number;
+  number: number;
+  empty: boolean;
+}
+
+export interface AuditLog {
+  id: number;
+  action: string;
+  username: string;
+  clientId?: number;
+  details: string;
+  ipAddress: string;
+  userAgent?: string;
+  requestMethod?: string;
+  requestUrl?: string;
+  requestParams?: string;
+  responseStatus?: number;
+  errorMessage?: string;
+  createdAt: string;
+  executionTime?: number;
 } 

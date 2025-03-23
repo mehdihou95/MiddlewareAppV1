@@ -1,13 +1,17 @@
 package com.xml.processor.repository;
 
 import com.xml.processor.model.ProcessedFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface ProcessedFileRepository extends BaseRepository<ProcessedFile> {
+public interface ProcessedFileRepository extends JpaRepository<ProcessedFile, Long> {
     /**
      * Find all processed files for a specific client
      *
@@ -34,4 +38,12 @@ public interface ProcessedFileRepository extends BaseRepository<ProcessedFile> {
     List<ProcessedFile> findByClient_IdAndFileName(Long clientId, String fileName);
 
     List<ProcessedFile> findByStatus(String status);
+
+    List<ProcessedFile> findByClientId(Long clientId);
+    Page<ProcessedFile> findByClientId(Long clientId, Pageable pageable);
+    Page<ProcessedFile> findByFileNameContainingIgnoreCase(String fileName, Pageable pageable);
+    Page<ProcessedFile> findByStatus(String status, Pageable pageable);
+    Page<ProcessedFile> findByProcessedDateBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    Page<ProcessedFile> findByClientIdAndStatus(Long clientId, String status, Pageable pageable);
+    Page<ProcessedFile> findByClientIdAndProcessedDateBetween(Long clientId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 } 
